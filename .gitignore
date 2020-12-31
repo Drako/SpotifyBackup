@@ -1,0 +1,12 @@
+# macos
+.DS_Store
+
+# dependencies
+elm-stuff/
+
+# build results
+index.html
+
+# intellij
+*.iml
+.idea/*
