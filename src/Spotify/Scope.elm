@@ -5,6 +5,12 @@ type Scope
     = PlaylistReadPrivate
     | PlaylistModifyPrivate
     | PlaylistModifyPublic
+    | PlaylistReadCollaborative
+
+
+all : List Scope
+all =
+    [ PlaylistReadPrivate, PlaylistModifyPrivate, PlaylistModifyPublic, PlaylistReadCollaborative ]
 
 
 toString : Scope -> String
@@ -18,3 +24,6 @@ toString scope =
 
         PlaylistModifyPublic ->
             "playlist-modify-public"
+
+        PlaylistReadCollaborative ->
+            "playlist-read-collaborative"

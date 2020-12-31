@@ -1,28 +1,29 @@
 module Main exposing (main)
 
+import Backup exposing (BackupModel, BackupMsg(..))
 import Browser exposing (Document, UrlRequest(..), application)
 import Browser.Navigation as Nav exposing (Key)
-import Element exposing (Element, centerX, centerY, padding, rgb255, spacing)
-import Element.Border as Border
+import Element exposing (Element, centerX)
 import Element.Font as Font
-import Element.Input as Input
 import Html exposing (Html, div)
 import Route exposing (Route(..))
 import Spotify.Scope as Scope exposing (Scope(..))
 import Spotify.Token as Token exposing (Token)
+import Style exposing (centeredBody, spotifyButton)
 import Url exposing (Url)
 
 
 type alias Model =
     { key : Key
     , route : Route
-    , token : Maybe Token
+    , backup : Maybe BackupModel
     }
 
 
 type Msg
     = Redirect UrlRequest
     | Navigated Url
+    | BackupMessage BackupMsg
 
 
 init : () -> Url -> Key -> ( Model, Cmd Msg )
@@ -31,7 +32,7 @@ init _ url key =
         model =
             { key = key
             , route = Route.fromUrl url
-            , token = Nothing
+            , backup = Nothing
             }
     in
     case model.route of
@@ -42,19 +43,16 @@ init _ url key =
             in
             case ( error, maybeToken ) of
                 ( Nothing, Just token ) ->
-                    ( { model | token = token }, Nav.replaceUrl key "/backup" )
+                    ( { model | backup = Maybe.map Backup.init token }, Nav.replaceUrl key "/backup" )
 
                 _ ->
                     ( model, Nav.load "/" )
 
-        _ ->
+        Home ->
             ( model, Cmd.none )
 
-
-centeredBody : List (Element Msg) -> Html Msg
-centeredBody elements =
-    Element.layout [] <|
-        Element.column [ centerX, centerY, spacing 15 ] elements
+        _ ->
+            ( model, Nav.load "/" )
 
 
 viewNotFoundPage : Url -> Html Msg
@@ -80,28 +78,19 @@ scopes scopeList =
 viewStartPage : Html Msg
 viewStartPage =
     centeredBody
-        [ Input.button
-            [ Border.solid
-            , Border.rounded 10
-            , Border.color (rgb255 0x00 0x00 0xFF)
-            , Border.width 2
-            , padding 10
-            ]
-            { onPress =
-                Just
-                    (redirectToExternal
-                        ("https://accounts.spotify.com/authorize"
-                            ++ "?client_id=d09a22d09df145d4bd86d541fd46f4b4"
-                            ++ "&response_type=token"
-                            ++ "&redirect_uri="
-                            ++ Url.percentEncode "https://spotify-backup.drako.guru/callback"
-                            ++ "&show_dialog=true"
-                            ++ "&scope="
-                            ++ scopes [ PlaylistReadPrivate, PlaylistModifyPrivate, PlaylistModifyPublic ]
-                        )
+        [ spotifyButton "Login to Spotify." <|
+            Just
+                (redirectToExternal
+                    ("https://accounts.spotify.com/authorize"
+                        ++ "?client_id=d09a22d09df145d4bd86d541fd46f4b4"
+                        ++ "&response_type=token"
+                        ++ "&redirect_uri="
+                        ++ Url.percentEncode "https://spotify-backup.drako.guru/callback"
+                        ++ "&show_dialog=true"
+                        ++ "&scope="
+                        ++ scopes Scope.all
                     )
-            , label = Element.text "Login to Spotify."
-            }
+                )
         ]
 
 
@@ -109,12 +98,15 @@ view : Model -> Document Msg
 view model =
     { title = "Spotify Backup"
     , body =
-        [ case model.route of
-            Home ->
+        [ case ( model.route, model.backup ) of
+            ( Home, _ ) ->
                 viewStartPage
 
-            NotFound url ->
+            ( NotFound url, _ ) ->
                 viewNotFoundPage url
+
+            ( Backup, Just backupModel ) ->
+                Html.map BackupMessage <| Backup.view backupModel
 
             _ ->
                 -- this would never happen
@@ -123,19 +115,46 @@ view model =
     }
 
 
+maybeModel : ( model, msg ) -> ( Maybe model, msg )
+maybeModel ( model, msg ) =
+    ( Just model, msg )
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case msg of
-        Navigated url ->
-            ( { model | route = Route.fromUrl url }, Cmd.none )
+    case ( msg, model.backup ) of
+        ( Navigated url, _ ) ->
+            let
+                route =
+                    Route.fromUrl url
 
-        Redirect urlRequest ->
+                ( backupModel, backupMsg ) =
+                    case ( route, model.backup ) of
+                        ( Backup, Just oldBackupModel ) ->
+                            maybeModel <| Backup.update Enter oldBackupModel
+
+                        _ ->
+                            ( model.backup, Cmd.none )
+            in
+            ( { model | route = Route.fromUrl url, backup = backupModel }, Cmd.map BackupMessage backupMsg )
+
+        ( Redirect urlRequest, _ ) ->
             case urlRequest of
                 Internal url ->
                     ( model, Nav.pushUrl model.key <| Url.toString url )
 
                 External url ->
                     ( model, Nav.load url )
+
+        ( BackupMessage backupMsg, Just backupModel ) ->
+            let
+                ( updatedModel, cmd ) =
+                    Backup.update backupMsg backupModel
+            in
+            ( { model | backup = Just updatedModel }, Cmd.map BackupMessage cmd )
+
+        _ ->
+            ( model, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg

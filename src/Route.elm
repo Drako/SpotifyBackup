@@ -9,6 +9,7 @@ import Url.Parser.Query as Query
 type Route
     = Home
     | Callback (Maybe String) (Maybe String)
+    | Backup
     | NotFound Url
 
 
@@ -17,6 +18,7 @@ route =
     oneOf
         [ map Home top
         , map Callback (s "callback" <?> Query.string "error" </> fragment identity)
+        , map Backup (s "backup")
         ]
 
 
