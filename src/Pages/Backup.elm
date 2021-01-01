@@ -2,7 +2,7 @@ module Pages.Backup exposing (BackupModel, BackupMsg(..), init, update, view)
 
 import Backup.Encoder exposing (playlistToJson)
 import Backup.Payloads exposing (spotifyToBackup)
-import Element exposing (Column, Element, alignLeft, alignRight, centerY, column, el, fill, height, image, layout, newTabLink, none, padding, paddingEach, px, row, shrink, table, text, width)
+import Element exposing (Column, Element, alignLeft, alignRight, centerX, centerY, column, el, fill, height, image, layout, newTabLink, none, padding, paddingEach, px, row, shrink, table, text, width)
 import Element.Background as Background
 import Element.Font as Font
 import Element.Input exposing (checkbox, defaultCheckbox, labelHidden, labelLeft)
@@ -110,7 +110,7 @@ coverColumn =
 nameColumn : Column Playlist BackupMsg
 nameColumn =
     { header = heading "Name"
-    , width = shrink
+    , width = fill
     , view =
         \{ url, name } ->
             el [ centerY, alignLeft, paddingEach { edges | right = 10 } ] <|
@@ -200,9 +200,9 @@ view model =
         , Font.color spotifyForeground
         ]
     <|
-        column [ padding 20 ]
+        column [ padding 20, width fill ]
             [ Maybe.withDefault none <| Maybe.map text model.error
-            , table [ width fill ]
+            , table []
                 { data = model.playlists
                 , columns =
                     [ coverColumn
