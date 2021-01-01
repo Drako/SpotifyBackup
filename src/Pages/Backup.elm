@@ -1,4 +1,4 @@
-module Backup exposing (BackupModel, BackupMsg(..), init, update, view)
+module Pages.Backup exposing (BackupModel, BackupMsg(..), init, update, view)
 
 import Element
     exposing

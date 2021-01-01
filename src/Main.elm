@@ -1,11 +1,11 @@
 module Main exposing (main)
 
-import Backup exposing (BackupModel, BackupMsg(..))
 import Browser exposing (Document, UrlRequest(..), application)
 import Browser.Navigation as Nav exposing (Key)
 import Element exposing (Element, centerX)
 import Element.Font as Font
 import Html exposing (Html, div)
+import Pages.Backup as Backup exposing (BackupModel, BackupMsg(..))
 import Route exposing (Route(..))
 import Spotify.Scope as Scope exposing (Scope(..))
 import Spotify.Token as Token exposing (Token)
@@ -13,10 +13,15 @@ import Style exposing (centeredBody, spotifyButton)
 import Url exposing (Url)
 
 
+type Page
+    = StartPage
+    | BackupPage BackupModel
+
+
 type alias Model =
     { key : Key
     , route : Route
-    , backup : Maybe BackupModel
+    , page : Page
     }
 
 
@@ -32,18 +37,19 @@ init _ url key =
         model =
             { key = key
             , route = Route.fromUrl url
-            , backup = Nothing
+            , page = StartPage
             }
     in
     case model.route of
         Callback error fragment ->
             let
                 maybeToken =
-                    Maybe.map Token.fromFragment fragment
+                    fragment
+                        |> Maybe.andThen Token.fromFragment
             in
             case ( error, maybeToken ) of
                 ( Nothing, Just token ) ->
-                    ( { model | backup = Maybe.map Backup.init token }, Nav.replaceUrl key "/backup" )
+                    ( { model | page = BackupPage <| Backup.init token }, Nav.replaceUrl key "/backup" )
 
                 _ ->
                     ( model, Nav.load "/" )
@@ -98,14 +104,14 @@ view : Model -> Document Msg
 view model =
     { title = "Spotify Backup"
     , body =
-        [ case ( model.route, model.backup ) of
-            ( Home, _ ) ->
+        [ case ( model.route, model.page ) of
+            ( Home, StartPage ) ->
                 viewStartPage
 
             ( NotFound url, _ ) ->
                 viewNotFoundPage url
 
-            ( Backup, Just backupModel ) ->
+            ( Backup, BackupPage backupModel ) ->
                 Html.map BackupMessage <| Backup.view backupModel
 
             _ ->
@@ -115,28 +121,25 @@ view model =
     }
 
 
-maybeModel : ( model, msg ) -> ( Maybe model, msg )
-maybeModel ( model, msg ) =
-    ( Just model, msg )
-
-
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case ( msg, model.backup ) of
+    case ( msg, model.page ) of
         ( Navigated url, _ ) ->
             let
                 route =
                     Route.fromUrl url
 
-                ( backupModel, backupMsg ) =
-                    case ( route, model.backup ) of
-                        ( Backup, Just oldBackupModel ) ->
-                            maybeModel <| Backup.update Enter oldBackupModel
+                ( page, cmd ) =
+                    case ( route, model.page ) of
+                        -- special behaviour when entering /backup via redirect
+                        ( Backup, BackupPage oldBackupModel ) ->
+                            Backup.update Enter oldBackupModel
+                                |> (\( a, b ) -> ( BackupPage a, Cmd.map BackupMessage b ))
 
                         _ ->
-                            ( model.backup, Cmd.none )
+                            ( model.page, Cmd.none )
             in
-            ( { model | route = Route.fromUrl url, backup = backupModel }, Cmd.map BackupMessage backupMsg )
+            ( { model | route = Route.fromUrl url, page = page }, cmd )
 
         ( Redirect urlRequest, _ ) ->
             case urlRequest of
@@ -146,12 +149,12 @@ update msg model =
                 External url ->
                     ( model, Nav.load url )
 
-        ( BackupMessage backupMsg, Just backupModel ) ->
+        ( BackupMessage backupMsg, BackupPage backupModel ) ->
             let
                 ( updatedModel, cmd ) =
                     Backup.update backupMsg backupModel
             in
-            ( { model | backup = Just updatedModel }, Cmd.map BackupMessage cmd )
+            ( { model | page = BackupPage updatedModel }, Cmd.map BackupMessage cmd )
 
         _ ->
             ( model, Cmd.none )
