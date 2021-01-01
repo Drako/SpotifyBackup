@@ -10,6 +10,7 @@ type alias Image =
 
 type alias Playlist =
     { href : String
+    , url : String
     , id : String
     , images : List Image
     , name : String

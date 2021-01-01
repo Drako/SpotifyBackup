@@ -1,6 +1,6 @@
 module Spotify.Decoder exposing (..)
 
-import Json.Decode exposing (Decoder, at, bool, field, int, list, map, map2, map3, map6, map7, maybe, string)
+import Json.Decode exposing (Decoder, at, bool, field, int, list, map, map2, map3, map7, map8, maybe, string)
 import Spotify.Payloads exposing (Image, Paging, Playlist)
 
 
@@ -12,10 +12,16 @@ image =
         (field "height" <| maybe int)
 
 
+spotifyUrl : Decoder String
+spotifyUrl =
+    at [ "external_urls", "spotify" ] string
+
+
 playlist : Decoder Playlist
 playlist =
-    map7 Playlist
+    map8 Playlist
         (field "href" string)
+        spotifyUrl
         (field "id" string)
         (field "images" <| list image)
         (field "name" string)
@@ -26,10 +32,10 @@ playlist =
                 (field "total" int)
         )
         (field "owner" <|
-            map3 (\name id spotifyUrl -> { displayName = name, id = id, url = spotifyUrl })
+            map3 (\name id url -> { displayName = name, id = id, url = url })
                 (field "display_name" <| maybe string)
                 (field "id" string)
-                (at [ "external_urls", "spotify" ] string)
+                spotifyUrl
         )
 
 

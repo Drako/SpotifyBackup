@@ -1,22 +1,23 @@
 module Backup exposing (..)
 
-import Element exposing (Element, alignLeft, alignRight, centerX, centerY, column, el, fill, height, image, layout, newTabLink, padding, paddingEach, px, shrink, table, text, width)
+import Element exposing (Element, alignLeft, alignRight, centerY, column, el, fill, height, image, layout, newTabLink, padding, paddingEach, px, row, shrink, table, text, width)
 import Element.Background as Background
 import Element.Font as Font
-import Element.Input exposing (checkbox, defaultCheckbox, labelHidden)
+import Element.Input exposing (checkbox, defaultCheckbox, labelHidden, labelLeft)
 import Html exposing (Html)
 import Http exposing (Error)
 import Set exposing (Set)
 import Spotify.Api as Api exposing (errorToString)
 import Spotify.Payloads exposing (Paging, Playlist)
 import Spotify.Token exposing (Token)
-import Style exposing (edges, heading, spotifyBackground, spotifyForeground)
+import Style exposing (edges, heading, headingRow, spotifyBackground, spotifyForeground)
 
 
 type BackupMsg
     = Enter
     | GotPlaylists (Result Error (Paging Playlist))
     | PlaylistSelected String Bool
+    | SelectAll Bool
 
 
 type alias BackupModel =
@@ -42,12 +43,19 @@ update msg model =
         Enter ->
             ( { model | playlists = [] }, Api.fetchPlaylists model.token GotPlaylists )
 
-        PlaylistSelected id value ->
-            if value == True then
+        PlaylistSelected id selected ->
+            if selected then
                 ( { model | selectedPlaylists = Set.insert id model.selectedPlaylists }, Cmd.none )
 
             else
                 ( { model | selectedPlaylists = Set.remove id model.selectedPlaylists }, Cmd.none )
+
+        SelectAll selected ->
+            if selected then
+                ( { model | selectedPlaylists = Set.fromList <| List.map .id model.playlists }, Cmd.none )
+
+            else
+                ( { model | selectedPlaylists = Set.empty }, Cmd.none )
 
         GotPlaylists result ->
             case result of
@@ -90,9 +98,12 @@ view model =
                     , { header = heading "Name"
                       , width = shrink
                       , view =
-                            \{ name } ->
+                            \{ url, name } ->
                                 el [ centerY, alignLeft, paddingEach { edges | right = 10 } ] <|
-                                    text name
+                                    newTabLink [ Font.underline ]
+                                        { url = url
+                                        , label = text name
+                                        }
                       }
                     , { header = heading "Owner"
                       , width = shrink
@@ -124,7 +135,23 @@ view model =
                                     text <|
                                         String.fromInt tracks.total
                       }
-                    , { header = heading "Export"
+                    , { header =
+                            headingRow
+                                [ text "Export"
+                                , checkbox [ centerY ]
+                                    { onChange = SelectAll
+                                    , icon = defaultCheckbox
+                                    , checked = List.all (\{ id } -> Set.member id model.selectedPlaylists) model.playlists
+                                    , label =
+                                        labelLeft
+                                            [ paddingEach { edges | left = 10 }
+                                            , Font.size 12
+                                            , centerY
+                                            ]
+                                        <|
+                                            text "(all)"
+                                    }
+                                ]
                       , width = shrink
                       , view =
                             \{ id } ->

@@ -1,6 +1,6 @@
 module Style exposing (..)
 
-import Element exposing (Color, Element, centerX, centerY, column, el, layout, mouseOver, padding, paddingEach, rgb255, spacing, text)
+import Element exposing (Color, Element, centerX, centerY, column, el, layout, mouseOver, padding, paddingEach, rgb255, row, spacing, text)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
@@ -56,6 +56,19 @@ heading txt =
         ]
     <|
         text txt
+
+
+headingRow : List (Element msg) -> Element msg
+headingRow elements =
+    row
+        [ Font.color white
+        , Font.size 24
+        , Border.widthEach { edges | bottom = 1 }
+        , Border.solid
+        , Border.color spotifyForeground
+        , paddingEach { edges | bottom = 10, right = 10 }
+        ]
+        elements
 
 
 spotifyButton : String -> Maybe msg -> Element msg
