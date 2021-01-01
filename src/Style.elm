@@ -89,19 +89,20 @@ headingRow elements =
 
 spotifyButton : String -> Maybe msg -> Element msg
 spotifyButton label action =
-    button
-        [ Border.solid
-        , Border.rounded 25
-        , Border.color spotifyGreen
-        , Border.width 1
-        , padding 15
-        , Background.color spotifyGreen
-        , Font.color white
-        , mouseOver
-            [ Border.color spotifyLightGreen
-            , Background.color spotifyLightGreen
+    el [ padding 10 ] <|
+        button
+            [ Border.solid
+            , Border.rounded 25
+            , Border.color spotifyGreen
+            , Border.width 1
+            , padding 15
+            , Background.color spotifyGreen
+            , Font.color white
+            , mouseOver
+                [ Border.color spotifyLightGreen
+                , Background.color spotifyLightGreen
+                ]
             ]
-        ]
-        { onPress = action
-        , label = text label
-        }
+            { onPress = action
+            , label = text label
+            }

@@ -25,6 +25,7 @@ type BackupMsg
     | SelectAll Bool
     | Export Playlist
     | ExportSelected
+    | ExportAll
     | GotTracks Playlist (List Track) (Result Error (Paging Track))
     | GotTracksMultiPlaylist (List Backup.Playlist) Playlist (List Playlist) (List Track) (Result Error (Paging Track))
 
@@ -146,6 +147,15 @@ update msg model =
 
                 Err error ->
                     ( { model | error = Just ("Failed retrieving Tracks: " ++ errorToString error) }, Cmd.none )
+
+        ExportAll ->
+            case model.playlists of
+                pl :: remainingPlaylists ->
+                    ( model, Api.fetchTracks model.token pl <| GotTracksMultiPlaylist [] pl remainingPlaylists [] )
+
+                _ ->
+                    -- no playlists at all
+                    ( model, Cmd.none )
 
         ExportSelected ->
             let
@@ -269,6 +279,14 @@ exportColumn { playlists, selectedPlaylists } =
     }
 
 
+actionButtons : Element BackupMsg
+actionButtons =
+    row [ centerX ]
+        [ spotifyButton "Export selected." <| Just ExportSelected
+        , spotifyButton "Export all." <| Just ExportAll
+        ]
+
+
 view : BackupModel -> Html BackupMsg
 view model =
     layout
@@ -278,7 +296,7 @@ view model =
     <|
         column [ padding 20, width fill ]
             [ Maybe.withDefault none <| Maybe.map text model.error
-            , el [ centerX ] (spotifyButton "Export selected." <| Just ExportSelected)
+            , actionButtons
             , table []
                 { data = model.playlists
                 , columns =
@@ -290,5 +308,5 @@ view model =
                     , exportColumn model
                     ]
                 }
-            , el [ centerX ] (spotifyButton "Export selected." <| Just ExportSelected)
+            , actionButtons
             ]
