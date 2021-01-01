@@ -20,6 +20,15 @@ type alias Playlist =
     }
 
 
+visibilityToString : Bool -> String
+visibilityToString isPublic =
+    if isPublic then
+        "public"
+
+    else
+        "private"
+
+
 type alias Paging a =
     { href : String
     , items : List a

@@ -1,6 +1,6 @@
 module Backup exposing (..)
 
-import Element exposing (Element, alignLeft, alignRight, centerY, column, el, fill, height, image, layout, newTabLink, padding, paddingEach, px, row, shrink, table, text, width)
+import Element exposing (Column, Element, alignLeft, alignRight, centerY, column, el, fill, height, image, layout, newTabLink, none, padding, paddingEach, px, row, shrink, table, text, width)
 import Element.Background as Background
 import Element.Font as Font
 import Element.Input exposing (checkbox, defaultCheckbox, labelHidden, labelLeft)
@@ -8,7 +8,7 @@ import Html exposing (Html)
 import Http exposing (Error)
 import Set exposing (Set)
 import Spotify.Api as Api exposing (errorToString)
-import Spotify.Payloads exposing (Paging, Playlist)
+import Spotify.Payloads exposing (Paging, Playlist, visibilityToString)
 import Spotify.Token exposing (Token)
 import Style exposing (edges, heading, headingRow, spotifyBackground, spotifyForeground)
 
@@ -68,6 +68,108 @@ update msg model =
                     ( { model | error = Just ("Failed retrieving Playlists: " ++ errorToString error) }, Cmd.none )
 
 
+coverColumn : Column Playlist BackupMsg
+coverColumn =
+    { header = heading "Cover image"
+    , width = shrink
+    , view =
+        \{ images } ->
+            List.head images
+                |> Maybe.map
+                    (\img ->
+                        image
+                            [ width <| px 64
+                            , height <| px 64
+                            ]
+                            { src = img.url, description = "" }
+                    )
+                |> Maybe.withDefault (text "")
+    }
+
+
+nameColumn : Column Playlist BackupMsg
+nameColumn =
+    { header = heading "Name"
+    , width = shrink
+    , view =
+        \{ url, name } ->
+            el [ centerY, alignLeft, paddingEach { edges | right = 10 } ] <|
+                newTabLink [ Font.underline ]
+                    { url = url
+                    , label = text name
+                    }
+    }
+
+
+ownerColumn : Column Playlist BackupMsg
+ownerColumn =
+    { header = heading "Owner"
+    , width = shrink
+    , view =
+        \{ owner } ->
+            el [ centerY, paddingEach { edges | right = 10 } ] <|
+                newTabLink [ Font.underline ]
+                    { url = owner.url
+                    , label = text <| Maybe.withDefault owner.id owner.displayName
+                    }
+    }
+
+
+visibilityColumn : Column Playlist BackupMsg
+visibilityColumn =
+    { header = heading "Visibility"
+    , width = shrink
+    , view =
+        \{ isPublic } ->
+            el [ centerY, paddingEach { edges | right = 10 } ] <|
+                text <|
+                    visibilityToString isPublic
+    }
+
+
+tracksColumn : Column Playlist BackupMsg
+tracksColumn =
+    { header = heading "#Tracks"
+    , width = shrink
+    , view =
+        \{ tracks } ->
+            el [ centerY, alignRight ] <|
+                text <|
+                    String.fromInt tracks.total
+    }
+
+
+exportColumn : BackupModel -> Column Playlist BackupMsg
+exportColumn { playlists, selectedPlaylists } =
+    { header =
+        headingRow
+            [ text "Export"
+            , checkbox [ centerY ]
+                { onChange = SelectAll
+                , icon = defaultCheckbox
+                , checked = List.all (\{ id } -> Set.member id selectedPlaylists) playlists
+                , label =
+                    labelLeft
+                        [ paddingEach { edges | left = 10 }
+                        , Font.size 12
+                        , centerY
+                        ]
+                    <|
+                        text "(all)"
+                }
+            ]
+    , width = shrink
+    , view =
+        \{ id } ->
+            checkbox [ centerY ]
+                { onChange = PlaylistSelected id
+                , icon = defaultCheckbox
+                , checked = Set.member id selectedPlaylists
+                , label = labelHidden id
+                }
+    }
+
+
 view : BackupModel -> Html BackupMsg
 view model =
     layout
@@ -76,92 +178,16 @@ view model =
         ]
     <|
         column [ padding 20 ]
-            [ text <| Maybe.withDefault "" model.error
+            [ Maybe.withDefault none <| Maybe.map text model.error
             , table [ width fill ]
                 { data = model.playlists
                 , columns =
-                    [ { header = heading "Cover image"
-                      , width = shrink
-                      , view =
-                            \{ images } ->
-                                List.head images
-                                    |> Maybe.map
-                                        (\img ->
-                                            image
-                                                [ width <| px 64
-                                                , height <| px 64
-                                                ]
-                                                { src = img.url, description = "" }
-                                        )
-                                    |> Maybe.withDefault (text "")
-                      }
-                    , { header = heading "Name"
-                      , width = shrink
-                      , view =
-                            \{ url, name } ->
-                                el [ centerY, alignLeft, paddingEach { edges | right = 10 } ] <|
-                                    newTabLink [ Font.underline ]
-                                        { url = url
-                                        , label = text name
-                                        }
-                      }
-                    , { header = heading "Owner"
-                      , width = shrink
-                      , view =
-                            \{ owner } ->
-                                el [ centerY, paddingEach { edges | right = 10 } ] <|
-                                    newTabLink [ Font.underline ]
-                                        { url = owner.url
-                                        , label = text <| Maybe.withDefault owner.id owner.displayName
-                                        }
-                      }
-                    , { header = heading "Visibility"
-                      , width = shrink
-                      , view =
-                            \{ isPublic } ->
-                                el [ centerY, paddingEach { edges | right = 10 } ] <|
-                                    text <|
-                                        if isPublic then
-                                            "public"
-
-                                        else
-                                            "private"
-                      }
-                    , { header = heading "#Tracks"
-                      , width = shrink
-                      , view =
-                            \{ tracks } ->
-                                el [ centerY, alignRight ] <|
-                                    text <|
-                                        String.fromInt tracks.total
-                      }
-                    , { header =
-                            headingRow
-                                [ text "Export"
-                                , checkbox [ centerY ]
-                                    { onChange = SelectAll
-                                    , icon = defaultCheckbox
-                                    , checked = List.all (\{ id } -> Set.member id model.selectedPlaylists) model.playlists
-                                    , label =
-                                        labelLeft
-                                            [ paddingEach { edges | left = 10 }
-                                            , Font.size 12
-                                            , centerY
-                                            ]
-                                        <|
-                                            text "(all)"
-                                    }
-                                ]
-                      , width = shrink
-                      , view =
-                            \{ id } ->
-                                checkbox [ centerY ]
-                                    { onChange = PlaylistSelected id
-                                    , icon = defaultCheckbox
-                                    , checked = Set.member id model.selectedPlaylists
-                                    , label = labelHidden id
-                                    }
-                      }
+                    [ coverColumn
+                    , nameColumn
+                    , ownerColumn
+                    , visibilityColumn
+                    , tracksColumn
+                    , exportColumn model
                     ]
                 }
             ]
