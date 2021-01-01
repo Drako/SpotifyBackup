@@ -46,7 +46,7 @@ track =
             (field "name" string)
             (at [ "album", "name" ] string)
             (field "artists" <| list <| field "name" string)
-            spotifyUrl
+            (maybe spotifyUrl)
             (field "uri" string)
 
 

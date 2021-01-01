@@ -24,7 +24,7 @@ type alias Track =
     { name : String
     , album : String
     , artists : List String
-    , url : String
+    , url : Maybe String
     , uri : String
     }
 

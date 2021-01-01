@@ -1,7 +1,7 @@
 module Backup.Encoder exposing (playlistToJson, playlistsToJson)
 
 import Backup.Payloads exposing (Owner, Playlist, Track)
-import Json.Encode exposing (Value, encode, list, object, string)
+import Json.Encode exposing (Value, encode, int, list, null, object, string)
 
 
 owner : Owner -> Value
@@ -18,7 +18,7 @@ track it =
         [ ( "name", string it.name )
         , ( "album", string it.album )
         , ( "artists", list string it.artists )
-        , ( "url", string it.url )
+        , ( "url", Maybe.withDefault null <| Maybe.map string it.url ) -- no URL means local file
         , ( "uri", string it.uri )
         ]
 
@@ -31,6 +31,7 @@ playlist it =
         , ( "originalUrl", string it.originalUrl )
         , ( "name", string it.name )
         , ( "tracks", list track it.tracks )
+        , ( "totalTracks", int <| List.length it.tracks )
         ]
 
 

@@ -1,4 +1,4 @@
-module Spotify.Api exposing (errorToString, fetchMorePlaylists, fetchPlaylists, fetchTracks)
+module Spotify.Api exposing (errorToString, fetchMorePlaylists, fetchMoreTracks, fetchPlaylists, fetchTracks)
 
 import Http exposing (Error(..), Header, emptyBody, expectJson, header, request)
 import Spotify.Decoder exposing (paging, playlist, track)
@@ -95,3 +95,21 @@ fetchTracks tok playlist msg =
         , timeout = Nothing
         , tracker = Nothing
         }
+
+
+fetchMoreTracks : Token -> Paging Track -> (Result Error (Paging Track) -> msg) -> Cmd msg
+fetchMoreTracks tok current msg =
+    case current.next of
+        Just nextUrl ->
+            request
+                { method = "GET"
+                , headers = [ authHeader tok ]
+                , url = nextUrl
+                , body = emptyBody
+                , expect = expectJson msg <| paging track
+                , timeout = Nothing
+                , tracker = Nothing
+                }
+
+        _ ->
+            Cmd.none
