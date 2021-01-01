@@ -1,15 +1,16 @@
 module Pages.Backup exposing (BackupModel, BackupMsg(..), init, update, view)
 
-import Backup.Encoder exposing (playlistToJson)
-import Backup.Payloads exposing (spotifyToBackup)
+import Backup.Encoder exposing (playlistToJson, playlistsToJson)
+import Backup.Payloads as Backup exposing (spotifyToBackup)
 import Char exposing (isAlphaNum)
-import Element exposing (Column, Element, alignLeft, alignRight, centerY, column, el, fill, height, image, layout, newTabLink, none, padding, paddingEach, px, row, shrink, table, text, width)
+import Element exposing (Column, Element, alignLeft, alignRight, centerX, centerY, column, el, fill, height, image, layout, newTabLink, none, padding, paddingEach, px, row, shrink, table, text, width)
 import Element.Background as Background
 import Element.Font as Font
 import Element.Input exposing (checkbox, defaultCheckbox, labelHidden, labelLeft)
 import File.Download as Download
 import Html exposing (Html)
 import Http exposing (Error)
+import List exposing (reverse)
 import Set exposing (Set)
 import Spotify.Api as Api exposing (errorToString)
 import Spotify.Payloads exposing (Paging, Playlist, Track, visibilityToString)
@@ -23,7 +24,9 @@ type BackupMsg
     | PlaylistSelected String Bool
     | SelectAll Bool
     | Export Playlist
+    | ExportSelected
     | GotTracks Playlist (List Track) (Result Error (Paging Track))
+    | GotTracksMultiPlaylist (List Backup.Playlist) Playlist (List Playlist) (List Track) (Result Error (Paging Track))
 
 
 type alias BackupModel =
@@ -107,6 +110,55 @@ update msg model =
 
                 Err error ->
                     ( { model | error = Just ("Failed retrieving Tracks: " ++ errorToString error) }, Cmd.none )
+
+        GotTracksMultiPlaylist done current next prevTracks result ->
+            case result of
+                Ok tracks ->
+                    let
+                        allTracks =
+                            prevTracks ++ tracks.items
+                    in
+                    case tracks.next of
+                        Nothing ->
+                            case next of
+                                pl :: remaining ->
+                                    ( model
+                                    , Api.fetchTracks model.token pl <|
+                                        GotTracksMultiPlaylist
+                                            (spotifyToBackup current allTracks :: done)
+                                            pl
+                                            remaining
+                                            []
+                                    )
+
+                                _ ->
+                                    ( model
+                                    , Download.string "spotify-playlists.json" "application/json" <|
+                                        playlistsToJson <|
+                                            reverse (spotifyToBackup current allTracks :: done)
+                                    )
+
+                        Just _ ->
+                            ( model
+                            , Api.fetchMoreTracks model.token tracks <|
+                                GotTracksMultiPlaylist done current next allTracks
+                            )
+
+                Err error ->
+                    ( { model | error = Just ("Failed retrieving Tracks: " ++ errorToString error) }, Cmd.none )
+
+        ExportSelected ->
+            let
+                selectedPlaylists =
+                    List.filter (\{ id } -> Set.member id model.selectedPlaylists) model.playlists
+            in
+            case selectedPlaylists of
+                pl :: remainingPlaylists ->
+                    ( model, Api.fetchTracks model.token pl <| GotTracksMultiPlaylist [] pl remainingPlaylists [] )
+
+                _ ->
+                    -- no playlists selected
+                    ( model, Cmd.none )
 
         Export playlist ->
             ( model, Api.fetchTracks model.token playlist <| GotTracks playlist [] )
@@ -226,6 +278,7 @@ view model =
     <|
         column [ padding 20, width fill ]
             [ Maybe.withDefault none <| Maybe.map text model.error
+            , el [ centerX ] (spotifyButton "Export selected." <| Just ExportSelected)
             , table []
                 { data = model.playlists
                 , columns =
@@ -237,4 +290,5 @@ view model =
                     , exportColumn model
                     ]
                 }
+            , el [ centerX ] (spotifyButton "Export selected." <| Just ExportSelected)
             ]
