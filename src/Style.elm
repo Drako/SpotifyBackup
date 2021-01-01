@@ -1,6 +1,22 @@
 module Style exposing (..)
 
-import Element exposing (Color, Element, centerX, centerY, column, el, layout, mouseOver, padding, paddingEach, rgb255, row, spacing, text)
+import Element
+    exposing
+        ( Color
+        , Element
+        , centerX
+        , centerY
+        , column
+        , el
+        , layout
+        , mouseOver
+        , padding
+        , paddingEach
+        , rgb255
+        , row
+        , spacing
+        , text
+        )
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font

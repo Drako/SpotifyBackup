@@ -1,6 +1,28 @@
-module Backup exposing (..)
+module Backup exposing (BackupModel, BackupMsg(..), init, update, view)
 
-import Element exposing (Column, Element, alignLeft, alignRight, centerY, column, el, fill, height, image, layout, newTabLink, none, padding, paddingEach, px, row, shrink, table, text, width)
+import Element
+    exposing
+        ( Column
+        , Element
+        , alignLeft
+        , alignRight
+        , centerY
+        , column
+        , el
+        , fill
+        , height
+        , image
+        , layout
+        , newTabLink
+        , none
+        , padding
+        , paddingEach
+        , px
+        , shrink
+        , table
+        , text
+        , width
+        )
 import Element.Background as Background
 import Element.Font as Font
 import Element.Input exposing (checkbox, defaultCheckbox, labelHidden, labelLeft)
