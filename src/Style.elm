@@ -1,6 +1,6 @@
 module Style exposing (..)
 
-import Element exposing (Color, Element, centerX, centerY, column, layout, mouseOver, padding, rgb255, spacing, text)
+import Element exposing (Color, Element, centerX, centerY, column, el, layout, mouseOver, padding, paddingEach, rgb255, spacing, text)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
@@ -27,6 +27,35 @@ spotifyLightGreen =
 white : Color
 white =
     rgb255 0xFF 0xFF 0xFF
+
+
+spotifyForeground : Color
+spotifyForeground =
+    rgb255 0xB3 0xB3 0xB3
+
+
+spotifyBackground : Color
+spotifyBackground =
+    rgb255 0x28 0x28 0x28
+
+
+edges : { top : Int, bottom : Int, left : Int, right : Int }
+edges =
+    { top = 0, bottom = 0, left = 0, right = 0 }
+
+
+heading : String -> Element msg
+heading txt =
+    el
+        [ Font.color white
+        , Font.size 24
+        , Border.widthEach { edges | bottom = 1 }
+        , Border.solid
+        , Border.color spotifyForeground
+        , paddingEach { edges | bottom = 10, right = 10 }
+        ]
+    <|
+        text txt
 
 
 spotifyButton : String -> Maybe msg -> Element msg

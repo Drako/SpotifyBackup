@@ -15,6 +15,7 @@ type alias Playlist =
     , name : String
     , isPublic : Bool
     , tracks : { href : String, total : Int }
+    , owner : { displayName : Maybe String, id : String, url : String }
     }
 
 
