@@ -1,7 +1,7 @@
 module Spotify.Decoder exposing (..)
 
-import Json.Decode exposing (Decoder, at, bool, field, int, list, map, map2, map3, map7, map8, maybe, string)
-import Spotify.Payloads exposing (Image, Paging, Playlist)
+import Json.Decode exposing (Decoder, at, bool, field, int, list, map, map2, map3, map5, map7, map8, maybe, string)
+import Spotify.Payloads exposing (Image, Paging, Playlist, Track)
 
 
 image : Decoder Image
@@ -37,6 +37,17 @@ playlist =
                 (field "id" string)
                 spotifyUrl
         )
+
+
+track : Decoder Track
+track =
+    field "track" <|
+        map5 Track
+            (field "name" string)
+            (at [ "album", "name" ] string)
+            (field "artists" <| list <| field "name" string)
+            spotifyUrl
+            (field "uri" string)
 
 
 paging : Decoder a -> Decoder (Paging a)

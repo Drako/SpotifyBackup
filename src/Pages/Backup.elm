@@ -1,38 +1,19 @@
 module Pages.Backup exposing (BackupModel, BackupMsg(..), init, update, view)
 
-import Element
-    exposing
-        ( Column
-        , Element
-        , alignLeft
-        , alignRight
-        , centerY
-        , column
-        , el
-        , fill
-        , height
-        , image
-        , layout
-        , newTabLink
-        , none
-        , padding
-        , paddingEach
-        , px
-        , shrink
-        , table
-        , text
-        , width
-        )
+import Backup.Encoder exposing (playlistToJson)
+import Backup.Payloads exposing (spotifyToBackup)
+import Element exposing (Column, Element, alignLeft, alignRight, centerY, column, el, fill, height, image, layout, newTabLink, none, padding, paddingEach, px, row, shrink, table, text, width)
 import Element.Background as Background
 import Element.Font as Font
 import Element.Input exposing (checkbox, defaultCheckbox, labelHidden, labelLeft)
+import File.Download as Download
 import Html exposing (Html)
 import Http exposing (Error)
 import Set exposing (Set)
 import Spotify.Api as Api exposing (errorToString)
-import Spotify.Payloads exposing (Paging, Playlist, visibilityToString)
+import Spotify.Payloads exposing (Paging, Playlist, Track, visibilityToString)
 import Spotify.Token exposing (Token)
-import Style exposing (edges, heading, headingRow, spotifyBackground, spotifyForeground)
+import Style exposing (edges, heading, headingRow, spotifyBackground, spotifyButton, spotifyForeground)
 
 
 type BackupMsg
@@ -40,6 +21,8 @@ type BackupMsg
     | GotPlaylists (Result Error (Paging Playlist))
     | PlaylistSelected String Bool
     | SelectAll Bool
+    | Export Playlist
+    | GotTracks Playlist (Result Error (Paging Track))
 
 
 type alias BackupModel =
@@ -88,6 +71,21 @@ update msg model =
 
                 Err error ->
                     ( { model | error = Just ("Failed retrieving Playlists: " ++ errorToString error) }, Cmd.none )
+
+        GotTracks playlist result ->
+            case result of
+                Ok tracks ->
+                    ( model
+                    , Download.string "playlist.json" "application/json" <|
+                        playlistToJson <|
+                            spotifyToBackup playlist tracks.items
+                    )
+
+                Err error ->
+                    ( { model | error = Just ("Failed retrieving Tracks: " ++ errorToString error) }, Cmd.none )
+
+        Export playlist ->
+            ( model, Api.fetchTracks model.token playlist <| GotTracks playlist )
 
 
 coverColumn : Column Playlist BackupMsg
@@ -182,13 +180,16 @@ exportColumn { playlists, selectedPlaylists } =
             ]
     , width = shrink
     , view =
-        \{ id } ->
-            checkbox [ centerY ]
-                { onChange = PlaylistSelected id
-                , icon = defaultCheckbox
-                , checked = Set.member id selectedPlaylists
-                , label = labelHidden id
-                }
+        \playlist ->
+            row []
+                [ checkbox [ centerY, paddingEach { edges | right = 10 } ]
+                    { onChange = PlaylistSelected playlist.id
+                    , icon = defaultCheckbox
+                    , checked = Set.member playlist.id selectedPlaylists
+                    , label = labelHidden playlist.id
+                    }
+                , spotifyButton "Export this." <| Just <| Export playlist
+                ]
     }
 
 

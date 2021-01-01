@@ -20,6 +20,15 @@ type alias Playlist =
     }
 
 
+type alias Track =
+    { name : String
+    , album : String
+    , artists : List String
+    , url : String
+    , uri : String
+    }
+
+
 visibilityToString : Bool -> String
 visibilityToString isPublic =
     if isPublic then

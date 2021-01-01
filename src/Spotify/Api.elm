@@ -1,10 +1,10 @@
-module Spotify.Api exposing (errorToString, fetchMorePlaylists, fetchPlaylists)
+module Spotify.Api exposing (errorToString, fetchMorePlaylists, fetchPlaylists, fetchTracks)
 
 import Http exposing (Error(..), Header, emptyBody, expectJson, header, request)
-import Spotify.Decoder exposing (paging, playlist)
-import Spotify.Payloads exposing (Paging, Playlist)
+import Spotify.Decoder exposing (paging, playlist, track)
+import Spotify.Payloads exposing (Paging, Playlist, Track)
 import Spotify.Token exposing (Token)
-import Url.Builder exposing (QueryParameter, crossOrigin, int)
+import Url.Builder exposing (QueryParameter, crossOrigin, int, string)
 
 
 spotifyUrl : List String -> List QueryParameter -> String
@@ -16,6 +16,17 @@ myPlaylistsUrl : String
 myPlaylistsUrl =
     -- 50 is the maximum we can get with a single request
     spotifyUrl [ "me", "playlists" ] [ int "limit" 50, int "offset" 0 ]
+
+
+tracksUrl : Playlist -> String
+tracksUrl playlist =
+    spotifyUrl [ "playlists", playlist.id, "tracks" ]
+        [ int "limit" 100
+        , int "offset" 0
+        , string "fields" <|
+            "href,limit,next,offset,previous,total,"
+                ++ "items(track(name,uri,album.name,artists(name),external_urls.spotify))"
+        ]
 
 
 authHeader : Token -> Header
@@ -71,3 +82,16 @@ fetchMorePlaylists tok current msg =
 
         _ ->
             Cmd.none
+
+
+fetchTracks : Token -> Playlist -> (Result Error (Paging Track) -> msg) -> Cmd msg
+fetchTracks tok playlist msg =
+    request
+        { method = "GET"
+        , headers = [ authHeader tok ]
+        , url = tracksUrl playlist
+        , body = emptyBody
+        , expect = expectJson msg <| paging track
+        , timeout = Nothing
+        , tracker = Nothing
+        }
