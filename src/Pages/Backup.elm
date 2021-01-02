@@ -148,6 +148,16 @@ retrievalFailure model what err =
     )
 
 
+noCollisions : ImportModel -> Bool
+noCollisions { renames, existing, selectedPlaylists, playlists } =
+    playlists
+        |> List.filter (\{ originalId } -> Set.member originalId selectedPlaylists)
+        |> List.filterMap (\{ name } -> Dict.get name renames)
+        |> List.map String.trim
+        |> List.any (\name -> Set.member name existing)
+        |> not
+
+
 importDialog : BackupModel -> Element BackupMsg
 importDialog model =
     Dialog.view <|
@@ -182,7 +192,13 @@ importDialog model =
                                     , importImportColumn importModel
                                     ]
                                 }
-                , footer = Just <| spotifyButton "Import." <| Just ImportSelected
+                , footer =
+                    Just <|
+                        if (not <| Set.isEmpty importModel.selectedPlaylists) && noCollisions importModel then
+                            spotifyButton "Import." <| Just ImportSelected
+
+                        else
+                            disabledButton "Import."
                 }
             )
             model.importDialog
