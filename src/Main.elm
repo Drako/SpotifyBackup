@@ -5,8 +5,10 @@ import Browser.Navigation as Nav exposing (Key)
 import Element exposing (Element, centerX)
 import Element.Font as Font
 import Html exposing (Html, div)
+import Http exposing (Error)
 import Pages.Backup as Backup exposing (BackupModel, BackupMsg(..))
 import Route exposing (Route(..))
+import Spotify.Api as Api
 import Spotify.Scope as Scope exposing (Scope(..))
 import Spotify.Token as Token exposing (Token)
 import Style exposing (centeredBody, spotifyButton)
@@ -29,6 +31,7 @@ type Msg
     = Redirect UrlRequest
     | Navigated Url
     | BackupMessage BackupMsg
+    | ReceivedUser Token (Result Error String)
 
 
 init : () -> Url -> Key -> ( Model, Cmd Msg )
@@ -49,7 +52,7 @@ init _ url key =
             in
             case ( error, maybeToken ) of
                 ( Nothing, Just token ) ->
-                    ( { model | page = BackupPage <| Backup.init token }, Nav.replaceUrl key "/backup" )
+                    ( model, Api.fetchUserId token <| ReceivedUser token )
 
                 _ ->
                     ( model, Nav.load "/" )
@@ -124,6 +127,14 @@ view model =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( msg, model.page ) of
+        ( ReceivedUser token result, _ ) ->
+            case result of
+                Ok userId ->
+                    ( { model | page = BackupPage <| Backup.init token userId }, Nav.replaceUrl model.key "/backup" )
+
+                Err _ ->
+                    ( model, Nav.load "/" )
+
         ( Navigated url, _ ) ->
             let
                 route =

@@ -1,4 +1,4 @@
-module Backup.Encoder exposing (playlistToJson, playlistsToJson)
+module Backup.Encoder exposing (playlistToJson, playlistsToJson, trackUris)
 
 import Backup.Payloads exposing (Owner, Playlist, Track)
 import Json.Encode exposing (Value, encode, int, list, null, object, string)
@@ -43,3 +43,8 @@ playlistsToJson pls =
 playlistToJson : Playlist -> String
 playlistToJson pl =
     playlistsToJson [ pl ]
+
+
+trackUris : List Track -> Value
+trackUris tracks =
+    list string <| List.map .uri tracks

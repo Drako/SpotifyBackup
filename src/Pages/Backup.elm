@@ -57,6 +57,8 @@ type BackupMsg
     | SelectAllForImport Bool
     | SelectForImport String Bool
     | ImportSelected
+    | PlaylistCreated (List Backup.Playlist) (List Backup.Playlist) (List Track) (Result Error String)
+    | TracksAdded (List Backup.Playlist) String (List Backup.Playlist) (List Track) (Result Error ())
 
 
 type alias ImportModel =
@@ -69,6 +71,7 @@ type alias ImportModel =
 
 type alias BackupModel =
     { token : Token
+    , userId : String
     , error : Maybe String
     , status : Maybe String
     , playlists : List Playlist
@@ -77,13 +80,14 @@ type alias BackupModel =
     }
 
 
-init : Token -> BackupModel
-init tok =
+init : Token -> String -> BackupModel
+init tok userId =
     { playlists = []
     , selectedPlaylists = Set.empty
     , error = Nothing
     , status = Nothing
     , token = tok
+    , userId = userId
     , importDialog = Nothing
     }
 
@@ -206,6 +210,16 @@ importDialog model =
             model.importDialog
 
 
+hasValue : Maybe a -> Bool
+hasValue mb =
+    case mb of
+        Just _ ->
+            True
+
+        Nothing ->
+            False
+
+
 decodeBackup : BackupModel -> String -> ( BackupModel, Cmd BackupMsg )
 decodeBackup model content =
     let
@@ -233,13 +247,18 @@ decodeBackup model content =
     ( newModel, Cmd.none )
 
 
+refresh : BackupModel -> ( BackupModel, Cmd BackupMsg )
+refresh model =
+    ( { model | playlists = [], status = Just "Retrieving playlists." }
+    , Api.fetchPlaylists model.token GotPlaylists
+    )
+
+
 update : BackupMsg -> BackupModel -> ( BackupModel, Cmd BackupMsg )
 update msg model =
     case msg of
         Enter ->
-            ( { model | playlists = [], status = Just "Retrieving playlists." }
-            , Api.fetchPlaylists model.token GotPlaylists
-            )
+            refresh model
 
         CloseImport ->
             ( { model | status = Nothing, importDialog = Nothing }, Cmd.none )
@@ -431,7 +450,15 @@ update msg model =
                 Just importModel ->
                     let
                         selectedPlaylists =
-                            List.filter (\{ originalId } -> Set.member originalId importModel.selectedPlaylists) importModel.playlists
+                            importModel.playlists
+                                |> List.filter (\{ originalId } -> Set.member originalId importModel.selectedPlaylists)
+                                |> List.map
+                                    (\pl ->
+                                        { pl
+                                            | name = Dict.get pl.name importModel.renames |> Maybe.withDefault pl.name |> String.trim
+                                            , tracks = List.filter (\{ url } -> hasValue url) pl.tracks
+                                        }
+                                    )
                     in
                     case selectedPlaylists of
                         pl :: remaining ->
@@ -439,11 +466,88 @@ update msg model =
                                 | importDialog = Nothing
                                 , status = Just <| importProgress [] remaining
                               }
-                            , Cmd.none
+                            , Api.createPlaylist model.token model.userId pl.name <|
+                                PlaylistCreated [] remaining pl.tracks
                             )
 
                         _ ->
                             ( { model | importDialog = Nothing, status = Nothing }, Cmd.none )
+
+        TracksAdded done playlistId todo tracks result ->
+            case result of
+                Err error ->
+                    ( { model | status = Nothing, error = Just <| errorToString error }, Cmd.none )
+
+                Ok _ ->
+                    let
+                        currentTracks =
+                            List.take 100 tracks
+
+                        remainingTracks =
+                            List.drop 100 tracks
+                    in
+                    if List.isEmpty currentTracks then
+                        case todo of
+                            pl :: remaining ->
+                                let
+                                    finished =
+                                        pl :: done
+                                in
+                                ( { model
+                                    | importDialog = Nothing
+                                    , status = Just <| importProgress finished remaining
+                                  }
+                                , Api.createPlaylist model.token model.userId pl.name <|
+                                    PlaylistCreated finished remaining pl.tracks
+                                )
+
+                            _ ->
+                                -- done
+                                refresh model
+
+                    else
+                        ( model
+                        , Api.appendToPlaylist model.token playlistId currentTracks <|
+                            TracksAdded done playlistId todo remainingTracks
+                        )
+
+        PlaylistCreated done todo tracks result ->
+            case result of
+                Err error ->
+                    ( { model | status = Nothing, error = Just <| errorToString error }, Cmd.none )
+
+                Ok playlistId ->
+                    let
+                        currentTracks =
+                            List.take 100 tracks
+
+                        remainingTracks =
+                            List.drop 100 tracks
+                    in
+                    if List.isEmpty currentTracks then
+                        case todo of
+                            pl :: remaining ->
+                                let
+                                    finished =
+                                        pl :: done
+                                in
+                                ( { model
+                                    | importDialog = Nothing
+                                    , status = Just <| importProgress finished remaining
+                                  }
+                                , Api.createPlaylist model.token model.userId pl.name <|
+                                    PlaylistCreated finished remaining pl.tracks
+                                )
+
+                            _ ->
+                                -- done, last playlist was empty
+                                refresh model
+
+                    else
+                        ( model
+                        , Api.appendToPlaylist model.token playlistId currentTracks <|
+                            TracksAdded done playlistId todo remainingTracks
+                        )
 
         Export playlist ->
             ( model, Api.fetchTracks model.token playlist <| GotTracks playlist [] )

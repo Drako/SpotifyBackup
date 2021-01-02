@@ -4,6 +4,16 @@ import Json.Decode exposing (Decoder, at, bool, field, int, list, map, map2, map
 import Spotify.Payloads exposing (Image, Paging, Playlist, Track)
 
 
+userId : Decoder String
+userId =
+    field "id" string
+
+
+playlistId : Decoder String
+playlistId =
+    field "id" string
+
+
 image : Decoder Image
 image =
     map3 Image
