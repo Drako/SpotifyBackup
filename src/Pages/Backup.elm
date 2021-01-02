@@ -31,7 +31,9 @@ import Element
 import Element.Background as Background
 import Element.Font as Font
 import Element.Input exposing (checkbox, defaultCheckbox, labelHidden, labelLeft)
+import File exposing (File)
 import File.Download as Download
+import File.Select as Select
 import Html exposing (Html)
 import Http exposing (Error)
 import List exposing (reverse)
@@ -40,6 +42,7 @@ import Spotify.Api as Api exposing (errorToString)
 import Spotify.Payloads exposing (Paging, Playlist, Track, visibilityToString)
 import Spotify.Token exposing (Token)
 import Style exposing (disabledButton, edges, heading, headingRow, spotifyBackground, spotifyButton, spotifyForeground)
+import Task
 
 
 type BackupMsg
@@ -52,6 +55,9 @@ type BackupMsg
     | ExportAll
     | GotTracks Playlist (List Track) (Result Error (Paging Track))
     | GotTracksMultiPlaylist (List Backup.Playlist) Playlist (List Playlist) (List Track) (Result Error (Paging Track))
+    | Import
+    | ImportFileSelected File
+    | ImportFileLoaded String
 
 
 type alias BackupModel =
@@ -122,6 +128,17 @@ update msg model =
             ( { model | playlists = [], status = Just "Retrieving playlists." }
             , Api.fetchPlaylists model.token GotPlaylists
             )
+
+        Import ->
+            ( model, Select.file [ "application/json" ] ImportFileSelected )
+
+        ImportFileSelected file ->
+            ( { model | status = Just <| "Reading file: " ++ File.name file ++ "..." }
+            , Task.perform ImportFileLoaded (File.toString file)
+            )
+
+        ImportFileLoaded _ ->
+            ( { model | status = Nothing }, Cmd.none )
 
         PlaylistSelected id selected ->
             if selected then
@@ -355,19 +372,21 @@ exportColumn { playlists, selectedPlaylists, status } =
 
 actionButtons : BackupModel -> Element BackupMsg
 actionButtons { status } =
+    let
+        buttons =
+            [ ( "Refresh playlists.", Enter )
+            , ( "Export selected.", ExportSelected )
+            , ( "Export all.", ExportAll )
+            , ( "Import.", Import )
+            ]
+    in
     row [ centerX ]
         (case status of
             Nothing ->
-                [ spotifyButton "Refresh playlists." <| Just Enter
-                , spotifyButton "Export selected." <| Just ExportSelected
-                , spotifyButton "Export all." <| Just ExportAll
-                ]
+                List.map (\( txt, msg ) -> spotifyButton txt <| Just msg) buttons
 
             Just _ ->
-                [ disabledButton "Refresh playlist."
-                , disabledButton "Export selected."
-                , disabledButton "Export all."
-                ]
+                List.map (\( txt, _ ) -> disabledButton txt) buttons
         )
 
 

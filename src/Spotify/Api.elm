@@ -21,9 +21,11 @@ myPlaylistsUrl =
 tracksUrl : Playlist -> String
 tracksUrl playlist =
     spotifyUrl [ "playlists", playlist.id, "tracks" ]
+        -- 100 is the maximum we can get with a single request
         [ int "limit" 100
         , int "offset" 0
         , string "fields" <|
+            -- interestingly these fields are kinda ignored for local tracks
             "href,limit,next,offset,previous,total,"
                 ++ "items(track(name,uri,album.name,artists(name),external_urls.spotify))"
         ]
