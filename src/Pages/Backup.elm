@@ -105,11 +105,23 @@ progress done todo =
     "Retrieving playlist " ++ String.fromInt current ++ "/" ++ String.fromInt fullCount ++ "..."
 
 
+retrievalFailure : BackupModel -> String -> Error -> ( BackupModel, Cmd BackupMsg )
+retrievalFailure model what err =
+    ( { model
+        | status = Nothing
+        , error = Just <| "Failed retrieving " ++ what ++ ": " ++ errorToString err
+      }
+    , Cmd.none
+    )
+
+
 update : BackupMsg -> BackupModel -> ( BackupModel, Cmd BackupMsg )
 update msg model =
     case msg of
         Enter ->
-            ( { model | playlists = [] }, Api.fetchPlaylists model.token GotPlaylists )
+            ( { model | playlists = [], status = Just "Retrieving playlists." }
+            , Api.fetchPlaylists model.token GotPlaylists
+            )
 
         PlaylistSelected id selected ->
             if selected then
@@ -128,12 +140,17 @@ update msg model =
         GotPlaylists result ->
             case result of
                 Ok playlists ->
-                    ( { model | playlists = model.playlists ++ playlists.items }
-                    , Api.fetchMorePlaylists model.token playlists GotPlaylists
-                    )
+                    case playlists.next of
+                        Just _ ->
+                            ( { model | playlists = model.playlists ++ playlists.items }
+                            , Api.fetchMorePlaylists model.token playlists GotPlaylists
+                            )
+
+                        Nothing ->
+                            ( { model | playlists = model.playlists ++ playlists.items, status = Nothing }, Cmd.none )
 
                 Err error ->
-                    ( { model | error = Just ("Failed retrieving Playlists: " ++ errorToString error) }, Cmd.none )
+                    retrievalFailure model "Playlists" error
 
         GotTracks playlist prevTracks result ->
             case result of
@@ -154,7 +171,7 @@ update msg model =
                             ( model, Api.fetchMoreTracks model.token tracks <| GotTracks playlist allTracks )
 
                 Err error ->
-                    ( { model | error = Just ("Failed retrieving Tracks: " ++ errorToString error) }, Cmd.none )
+                    retrievalFailure model "Tracks" error
 
         GotTracksMultiPlaylist done current next prevTracks result ->
             case result of
@@ -194,7 +211,7 @@ update msg model =
                             )
 
                 Err error ->
-                    ( { model | error = Just ("Failed retrieving Tracks: " ++ errorToString error) }, Cmd.none )
+                    retrievalFailure model "Tracks" error
 
         ExportAll ->
             case model.playlists of
@@ -341,12 +358,14 @@ actionButtons { status } =
     row [ centerX ]
         (case status of
             Nothing ->
-                [ spotifyButton "Export selected." <| Just ExportSelected
+                [ spotifyButton "Refresh playlists." <| Just Enter
+                , spotifyButton "Export selected." <| Just ExportSelected
                 , spotifyButton "Export all." <| Just ExportAll
                 ]
 
             Just _ ->
-                [ disabledButton "Export selected."
+                [ disabledButton "Refresh playlist."
+                , disabledButton "Export selected."
                 , disabledButton "Export all."
                 ]
         )
