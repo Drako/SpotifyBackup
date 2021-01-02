@@ -45,6 +45,16 @@ white =
     rgb255 0xFF 0xFF 0xFF
 
 
+black : Color
+black =
+    rgb255 0 0 0
+
+
+lightRed : Color
+lightRed =
+    rgb255 0xFF 0xCC 0xCB
+
+
 spotifyForeground : Color
 spotifyForeground =
     rgb255 0xB3 0xB3 0xB3
