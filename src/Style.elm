@@ -106,3 +106,20 @@ spotifyButton label action =
             { onPress = action
             , label = text label
             }
+
+
+disabledButton : String -> Element msg
+disabledButton label =
+    el [ padding 10 ] <|
+        button
+            [ Border.solid
+            , Border.rounded 25
+            , Border.color spotifyGreen
+            , Border.width 1
+            , padding 15
+            , Background.color spotifyBackground
+            , Font.color white
+            ]
+            { onPress = Nothing
+            , label = text label
+            }

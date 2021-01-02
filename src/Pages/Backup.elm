@@ -3,7 +3,31 @@ module Pages.Backup exposing (BackupModel, BackupMsg(..), init, update, view)
 import Backup.Encoder exposing (playlistToJson, playlistsToJson)
 import Backup.Payloads as Backup exposing (spotifyToBackup)
 import Char exposing (isAlphaNum)
-import Element exposing (Column, Element, alignLeft, alignRight, centerX, centerY, column, el, fill, height, image, layout, newTabLink, none, padding, paddingEach, px, row, shrink, table, text, width)
+import Element
+    exposing
+        ( Column
+        , Element
+        , alignLeft
+        , alignRight
+        , centerX
+        , centerY
+        , column
+        , el
+        , fill
+        , height
+        , image
+        , layout
+        , newTabLink
+        , none
+        , padding
+        , paddingEach
+        , px
+        , row
+        , shrink
+        , table
+        , text
+        , width
+        )
 import Element.Background as Background
 import Element.Font as Font
 import Element.Input exposing (checkbox, defaultCheckbox, labelHidden, labelLeft)
@@ -15,7 +39,7 @@ import Set exposing (Set)
 import Spotify.Api as Api exposing (errorToString)
 import Spotify.Payloads exposing (Paging, Playlist, Track, visibilityToString)
 import Spotify.Token exposing (Token)
-import Style exposing (edges, heading, headingRow, spotifyBackground, spotifyButton, spotifyForeground)
+import Style exposing (disabledButton, edges, heading, headingRow, spotifyBackground, spotifyButton, spotifyForeground)
 
 
 type BackupMsg
@@ -33,6 +57,7 @@ type BackupMsg
 type alias BackupModel =
     { token : Token
     , error : Maybe String
+    , status : Maybe String
     , playlists : List Playlist
     , selectedPlaylists : Set String
     }
@@ -43,6 +68,7 @@ init tok =
     { playlists = []
     , selectedPlaylists = Set.empty
     , error = Nothing
+    , status = Nothing
     , token = tok
     }
 
@@ -59,6 +85,24 @@ filenameForPlaylist pl =
         |> String.filter isAllowedChar
     )
         ++ ".json"
+
+
+progress : List Backup.Playlist -> List Playlist -> String
+progress done todo =
+    let
+        doneCount =
+            List.length done
+
+        todoCount =
+            List.length todo
+
+        current =
+            doneCount + 1
+
+        fullCount =
+            current + todoCount
+    in
+    "Retrieving playlist " ++ String.fromInt current ++ "/" ++ String.fromInt fullCount ++ "..."
 
 
 update : BackupMsg -> BackupModel -> ( BackupModel, Cmd BackupMsg )
@@ -123,17 +167,21 @@ update msg model =
                         Nothing ->
                             case next of
                                 pl :: remaining ->
-                                    ( model
+                                    let
+                                        newDone =
+                                            spotifyToBackup current allTracks :: done
+                                    in
+                                    ( { model | status = Just <| progress newDone remaining }
                                     , Api.fetchTracks model.token pl <|
                                         GotTracksMultiPlaylist
-                                            (spotifyToBackup current allTracks :: done)
+                                            newDone
                                             pl
                                             remaining
                                             []
                                     )
 
                                 _ ->
-                                    ( model
+                                    ( { model | status = Nothing }
                                     , Download.string "spotify-playlists.json" "application/json" <|
                                         playlistsToJson <|
                                             reverse (spotifyToBackup current allTracks :: done)
@@ -151,7 +199,9 @@ update msg model =
         ExportAll ->
             case model.playlists of
                 pl :: remainingPlaylists ->
-                    ( model, Api.fetchTracks model.token pl <| GotTracksMultiPlaylist [] pl remainingPlaylists [] )
+                    ( { model | status = Just <| progress [] remainingPlaylists }
+                    , Api.fetchTracks model.token pl <| GotTracksMultiPlaylist [] pl remainingPlaylists []
+                    )
 
                 _ ->
                     -- no playlists at all
@@ -164,7 +214,9 @@ update msg model =
             in
             case selectedPlaylists of
                 pl :: remainingPlaylists ->
-                    ( model, Api.fetchTracks model.token pl <| GotTracksMultiPlaylist [] pl remainingPlaylists [] )
+                    ( { model | status = Just <| progress [] remainingPlaylists }
+                    , Api.fetchTracks model.token pl <| GotTracksMultiPlaylist [] pl remainingPlaylists []
+                    )
 
                 _ ->
                     -- no playlists selected
@@ -246,7 +298,7 @@ tracksColumn =
 
 
 exportColumn : BackupModel -> Column Playlist BackupMsg
-exportColumn { playlists, selectedPlaylists } =
+exportColumn { playlists, selectedPlaylists, status } =
     { header =
         headingRow
             [ text "Export"
@@ -274,17 +326,30 @@ exportColumn { playlists, selectedPlaylists } =
                     , checked = Set.member playlist.id selectedPlaylists
                     , label = labelHidden playlist.id
                     }
-                , spotifyButton "Export this." <| Just <| Export playlist
+                , case status of
+                    Nothing ->
+                        spotifyButton "Export this." <| Just <| Export playlist
+
+                    Just _ ->
+                        disabledButton "Export this."
                 ]
     }
 
 
-actionButtons : Element BackupMsg
-actionButtons =
+actionButtons : BackupModel -> Element BackupMsg
+actionButtons { status } =
     row [ centerX ]
-        [ spotifyButton "Export selected." <| Just ExportSelected
-        , spotifyButton "Export all." <| Just ExportAll
-        ]
+        (case status of
+            Nothing ->
+                [ spotifyButton "Export selected." <| Just ExportSelected
+                , spotifyButton "Export all." <| Just ExportAll
+                ]
+
+            Just _ ->
+                [ disabledButton "Export selected."
+                , disabledButton "Export all."
+                ]
+        )
 
 
 view : BackupModel -> Html BackupMsg
@@ -295,8 +360,9 @@ view model =
         ]
     <|
         column [ padding 20, width fill ]
-            [ Maybe.withDefault none <| Maybe.map text model.error
-            , actionButtons
+            [ Maybe.withDefault none <| Maybe.map (\err -> text <| "Error: " ++ err) model.error
+            , Maybe.withDefault none <| Maybe.map (\stat -> text <| "Status: " ++ stat) model.status
+            , actionButtons model
             , table []
                 { data = model.playlists
                 , columns =
@@ -308,5 +374,5 @@ view model =
                     , exportColumn model
                     ]
                 }
-            , actionButtons
+            , actionButtons model
             ]
