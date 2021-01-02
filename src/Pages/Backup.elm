@@ -6,7 +6,34 @@ import Backup.Payloads as Backup exposing (spotifyToBackup)
 import Char exposing (isAlphaNum)
 import Dialog
 import Dict exposing (Dict)
-import Element exposing (Column, Element, alignLeft, alignRight, centerX, centerY, column, el, fill, height, image, inFront, layout, maximum, newTabLink, none, padding, paddingEach, paddingXY, px, row, scrollbarY, shrink, table, text, width)
+import Element
+    exposing
+        ( Column
+        , Element
+        , alignLeft
+        , alignRight
+        , centerX
+        , centerY
+        , column
+        , el
+        , fill
+        , height
+        , image
+        , inFront
+        , layout
+        , maximum
+        , newTabLink
+        , none
+        , padding
+        , paddingEach
+        , px
+        , row
+        , scrollbarY
+        , shrink
+        , table
+        , text
+        , width
+        )
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
