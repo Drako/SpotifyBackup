@@ -175,7 +175,7 @@ importDialog model =
                     ]
                 , headerAttributes = []
                 , bodyAttributes = []
-                , footerAttributes = [ centerX ]
+                , footerAttributes = []
                 , header = Just (el [ Region.heading 1 ] <| text "Select playlists for import.")
                 , body =
                     Just <|
@@ -194,11 +194,13 @@ importDialog model =
                                 }
                 , footer =
                     Just <|
-                        if (not <| Set.isEmpty importModel.selectedPlaylists) && noCollisions importModel then
-                            spotifyButton "Import." <| Just ImportSelected
+                        el [ centerX ]
+                            (if (not <| Set.isEmpty importModel.selectedPlaylists) && noCollisions importModel then
+                                spotifyButton "Import." <| Just ImportSelected
 
-                        else
-                            disabledButton "Import."
+                             else
+                                disabledButton "Import."
+                            )
                 }
             )
             model.importDialog
@@ -520,8 +522,8 @@ importImportColumn { playlists, selectedPlaylists } =
                 , checked = List.all (\{ originalId } -> Set.member originalId selectedPlaylists) playlists
                 , label =
                     labelLeft
-                        [ paddingEach { edges | left = 10 }
-                        , Font.size 12
+                        [ Font.size 12
+                        , paddingEach { edges | left = 10 }
                         , centerY
                         ]
                     <|
@@ -531,7 +533,7 @@ importImportColumn { playlists, selectedPlaylists } =
     , width = shrink
     , view =
         \playlist ->
-            row []
+            row [ centerY ]
                 [ checkbox [ centerY, paddingEach { edges | left = 10 } ]
                     { onChange = SelectForImport playlist.originalId
                     , icon = defaultCheckbox
