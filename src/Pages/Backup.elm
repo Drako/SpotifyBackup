@@ -133,8 +133,8 @@ filenameForPlaylist pl =
         ++ ".json"
 
 
-exportProgress : List Backup.Playlist -> List Playlist -> String
-exportProgress done todo =
+progress : String -> List a -> List b -> String
+progress action done todo =
     let
         doneCount =
             List.length done
@@ -148,25 +148,17 @@ exportProgress done todo =
         fullCount =
             current + todoCount
     in
-    "Retrieving playlist " ++ String.fromInt current ++ "/" ++ String.fromInt fullCount ++ "..."
+    action ++ " " ++ String.fromInt current ++ "/" ++ String.fromInt fullCount ++ "..."
+
+
+exportProgress : List Backup.Playlist -> List Playlist -> String
+exportProgress =
+    progress "Retrieving playlist"
 
 
 importProgress : List Backup.Playlist -> List Backup.Playlist -> String
-importProgress done todo =
-    let
-        doneCount =
-            List.length done
-
-        todoCount =
-            List.length todo
-
-        current =
-            doneCount + 1
-
-        fullCount =
-            current + todoCount
-    in
-    "Importing playlist " ++ String.fromInt current ++ "/" ++ String.fromInt fullCount ++ "..."
+importProgress =
+    progress "Importing playlist"
 
 
 retrievalFailure : BackupModel -> String -> Error -> ( BackupModel, Cmd BackupMsg )
@@ -483,7 +475,7 @@ update msg model =
                                     (\pl ->
                                         { pl
                                             | name = Dict.get pl.name importModel.renames |> Maybe.withDefault pl.name |> String.trim
-                                            , tracks = List.filter (\{ url } -> hasValue url) pl.tracks
+                                            , tracks = List.filter (.url >> hasValue) pl.tracks
                                         }
                                     )
                     in

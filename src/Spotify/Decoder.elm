@@ -52,12 +52,14 @@ playlist =
 track : Decoder Track
 track =
     field "track" <|
-        map5 Track
-            (field "name" string)
-            (at [ "album", "name" ] string)
-            (field "artists" <| list <| field "name" string)
-            (maybe spotifyUrl)
-            (field "uri" string)
+        map (\t -> Maybe.withDefault { name = "", album = "", artists = [], url = Nothing, uri = "" } t) <|
+            maybe <|
+                map5 Track
+                    (field "name" string)
+                    (at [ "album", "name" ] string)
+                    (field "artists" <| list <| field "name" string)
+                    (maybe spotifyUrl)
+                    (field "uri" string)
 
 
 paging : Decoder a -> Decoder (Paging a)
