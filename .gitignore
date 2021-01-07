@@ -10,3 +10,6 @@ index.html
 # intellij
 *.iml
 .idea/*
+
+# elm-coverage
+.coverage/
