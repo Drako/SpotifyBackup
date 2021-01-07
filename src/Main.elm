@@ -5,16 +5,15 @@ import Browser.Navigation as Nav exposing (Key)
 import Html exposing (Html)
 import Http exposing (Error)
 import Pages.Backup as Backup exposing (BackupModel, BackupMsg(..))
+import Pages.Home as Home exposing (HomeMsg(..))
 import Route exposing (Route(..))
 import Spotify.Api as Api
-import Spotify.Scope as Scope exposing (Scope(..))
 import Spotify.Token as Token exposing (Token)
-import Style exposing (centeredBody, spotifyButton)
 import Url exposing (Url)
 
 
 type Page
-    = StartPage
+    = HomePage
     | BackupPage BackupModel
 
 
@@ -27,6 +26,7 @@ type alias Model =
 type Msg
     = Redirect UrlRequest
     | Navigated Url
+    | HomeMessage HomeMsg
     | BackupMessage BackupMsg
     | ReceivedUser Token (Result Error String)
 
@@ -39,7 +39,7 @@ init _ url key =
 
         model =
             { key = key
-            , page = StartPage
+            , page = HomePage
             }
     in
     case route of
@@ -63,42 +63,28 @@ init _ url key =
             ( model, Nav.load "/" )
 
 
-redirectToExternal : String -> Msg
-redirectToExternal urlString =
-    Redirect <| External urlString
-
-
-viewStartPage : Html Msg
-viewStartPage =
-    centeredBody
-        [ spotifyButton "Login to Spotify." <|
-            Just
-                (redirectToExternal
-                    ("https://accounts.spotify.com/authorize"
-                        ++ "?client_id=d09a22d09df145d4bd86d541fd46f4b4"
-                        ++ "&response_type=token"
-                        ++ "&redirect_uri="
-                        ++ Url.percentEncode "https://spotify-backup.drako.guru/callback"
-                        ++ "&show_dialog=true"
-                        ++ "&scope="
-                        ++ Scope.toQueryParams Scope.all
-                    )
-                )
-        ]
-
-
 view : Model -> Document Msg
 view model =
     { title = "Spotify Backup"
     , body =
         [ case model.page of
-            StartPage ->
-                viewStartPage
+            HomePage ->
+                Html.map HomeMessage Home.view
 
             BackupPage backupModel ->
                 Html.map BackupMessage <| Backup.view backupModel
         ]
     }
+
+
+redirect : Model -> UrlRequest -> ( Model, Cmd Msg )
+redirect model urlRequest =
+    case urlRequest of
+        Internal url ->
+            ( model, Nav.pushUrl model.key <| Url.toString url )
+
+        External url ->
+            ( model, Nav.load url )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -130,12 +116,10 @@ update msg model =
             ( { model | page = page }, cmd )
 
         ( Redirect urlRequest, _ ) ->
-            case urlRequest of
-                Internal url ->
-                    ( model, Nav.pushUrl model.key <| Url.toString url )
+            redirect model urlRequest
 
-                External url ->
-                    ( model, Nav.load url )
+        ( HomeMessage (Authenticate urlRequest), _ ) ->
+            redirect model urlRequest
 
         ( BackupMessage backupMsg, BackupPage backupModel ) ->
             let
