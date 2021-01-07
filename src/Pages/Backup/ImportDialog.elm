@@ -153,6 +153,9 @@ update msg model =
 
         Just importModel ->
             case msg of
+                CloseImport ->
+                    ( Nothing, Cmd.none )
+
                 SelectForImport id selected ->
                     if selected then
                         ( Just { importModel | selectedPlaylists = Set.insert id importModel.selectedPlaylists }
@@ -181,7 +184,7 @@ update msg model =
                     )
 
                 _ ->
-                    -- CloseImport and ImportSelected are handled in the Backup page
+                    -- ImportSelected is handled in the Backup page
                     -- the ImportDialog is only responsible for the selection process
                     ( Just importModel, Cmd.none )
 

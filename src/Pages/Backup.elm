@@ -169,9 +169,6 @@ update msg model =
         Enter ->
             refresh model
 
-        ImportMessage CloseImport ->
-            ( { model | status = Nothing, importDialog = Nothing }, Cmd.none )
-
         ImportMessage ImportSelected ->
             case model.importDialog of
                 Nothing ->
