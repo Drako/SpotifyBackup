@@ -61,11 +61,6 @@ authHeader { tokenType, accessToken } =
     header "Authorization" <| tokenType ++ " " ++ accessToken
 
 
-contentTypeHeader : Header
-contentTypeHeader =
-    header "Content-Type" "application/json"
-
-
 fetchPlaylists : Token -> (Result Error (Paging Playlist) -> msg) -> Cmd msg
 fetchPlaylists tok msg =
     request

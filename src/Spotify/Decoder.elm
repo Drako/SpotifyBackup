@@ -18,8 +18,8 @@ image : Decoder Image
 image =
     map3 Image
         (field "url" string)
-        (field "width" <| maybe int)
-        (field "height" <| maybe int)
+        (maybe <| field "width" int)
+        (maybe <| field "height" int)
 
 
 spotifyUrl : Decoder String
@@ -51,9 +51,9 @@ playlist =
 
 track : Decoder Track
 track =
-    field "track" <|
-        map (\t -> Maybe.withDefault { name = "", album = "", artists = [], url = Nothing, uri = "" } t) <|
-            maybe <|
+    map (\t -> Maybe.withDefault { name = "", album = "", artists = [], url = Nothing, uri = "" } t) <|
+        maybe <|
+            field "track" <|
                 map5 Track
                     (field "name" string)
                     (at [ "album", "name" ] string)
