@@ -55,8 +55,27 @@ type ImportMsg
     = CloseImport
     | RenameImport String String
     | SelectAllForImport Bool
+    | SelectNonCollidingForImport
     | SelectForImport String Bool
     | ImportSelected
+
+
+nonColliding : ImportModel -> Set String
+nonColliding { renames, existing, playlists } =
+    playlists
+        |> List.filterMap
+            (\{ originalId, name } ->
+                let
+                    renamed =
+                        Dict.get name renames |> Maybe.map String.trim |> Maybe.withDefault name
+                in
+                if Set.member renamed existing then
+                    Nothing
+
+                else
+                    Just originalId
+            )
+        |> Set.fromList
 
 
 noCollisions : ImportModel -> Bool
@@ -153,9 +172,6 @@ update msg model =
 
         Just importModel ->
             case msg of
-                CloseImport ->
-                    ( Nothing, Cmd.none )
-
                 SelectForImport id selected ->
                     if selected then
                         ( Just { importModel | selectedPlaylists = Set.insert id importModel.selectedPlaylists }
@@ -178,13 +194,16 @@ update msg model =
                         , Cmd.none
                         )
 
+                SelectNonCollidingForImport ->
+                    ( Just { importModel | selectedPlaylists = nonColliding importModel }, Cmd.none )
+
                 RenameImport name rename ->
                     ( Just { importModel | renames = Dict.insert name rename importModel.renames }
                     , Cmd.none
                     )
 
                 _ ->
-                    -- ImportSelected is handled in the Backup page
+                    -- ImportSelected and CloseImport are handled in the Backup page
                     -- the ImportDialog is only responsible for the selection process
                     ( Just importModel, Cmd.none )
 
@@ -225,13 +244,14 @@ view model =
                                 }
                 , footer =
                     Just <|
-                        el [ centerX ]
-                            (if (not <| Set.isEmpty importModel.selectedPlaylists) && noCollisions importModel then
+                        row [ centerX ]
+                            [ spotifyButton "Select non-colliding." <| Just SelectNonCollidingForImport
+                            , if (not <| Set.isEmpty importModel.selectedPlaylists) && noCollisions importModel then
                                 spotifyButton "Import." <| Just ImportSelected
 
-                             else
+                              else
                                 disabledButton "Import."
-                            )
+                            ]
                 }
             )
             model
