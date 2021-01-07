@@ -3,7 +3,6 @@ module Pages.Backup exposing (BackupModel, BackupMsg(..), init, update, view)
 import Backup.Decoder exposing (playlists)
 import Backup.Encoder exposing (playlistToJson, playlistsToJson)
 import Backup.Payloads as Backup exposing (spotifyToBackup)
-import Char exposing (isAlphaNum)
 import Dialog
 import Dict exposing (Dict)
 import Element
@@ -64,6 +63,7 @@ import Style
         , white
         )
 import Task
+import Utilities exposing (hasValue, isAllowedChar, progress)
 
 
 type BackupMsg
@@ -119,11 +119,6 @@ init tok userId =
     }
 
 
-isAllowedChar : Char -> Bool
-isAllowedChar c =
-    isAlphaNum c || c == ' ' || c == '-' || c == '_'
-
-
 filenameForPlaylist : Playlist -> String
 filenameForPlaylist pl =
     (pl.name
@@ -131,24 +126,6 @@ filenameForPlaylist pl =
         |> String.filter isAllowedChar
     )
         ++ ".json"
-
-
-progress : String -> List a -> List b -> String
-progress action done todo =
-    let
-        doneCount =
-            List.length done
-
-        todoCount =
-            List.length todo
-
-        current =
-            doneCount + 1
-
-        fullCount =
-            current + todoCount
-    in
-    action ++ " " ++ String.fromInt current ++ "/" ++ String.fromInt fullCount ++ "..."
 
 
 exportProgress : List Backup.Playlist -> List Playlist -> String
@@ -227,16 +204,6 @@ importDialog model =
                 }
             )
             model.importDialog
-
-
-hasValue : Maybe a -> Bool
-hasValue mb =
-    case mb of
-        Just _ ->
-            True
-
-        Nothing ->
-            False
 
 
 decodeBackup : BackupModel -> String -> ( BackupModel, Cmd BackupMsg )

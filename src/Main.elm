@@ -77,13 +77,6 @@ redirectToExternal urlString =
     Redirect <| External urlString
 
 
-scopes : List Scope -> String
-scopes scopeList =
-    List.map Scope.toString scopeList
-        |> String.join " "
-        |> Url.percentEncode
-
-
 viewStartPage : Html Msg
 viewStartPage =
     centeredBody
@@ -97,7 +90,7 @@ viewStartPage =
                         ++ Url.percentEncode "https://spotify-backup.drako.guru/callback"
                         ++ "&show_dialog=true"
                         ++ "&scope="
-                        ++ scopes Scope.all
+                        ++ Scope.toQueryParams Scope.all
                     )
                 )
         ]

@@ -1,5 +1,7 @@
 module Spotify.Scope exposing (..)
 
+import Url
+
 
 type Scope
     = PlaylistReadPrivate
@@ -27,3 +29,10 @@ toString scope =
 
         PlaylistReadCollaborative ->
             "playlist-read-collaborative"
+
+
+toQueryParams : List Scope -> String
+toQueryParams scopeList =
+    List.map toString scopeList
+        |> String.join " "
+        |> Url.percentEncode
