@@ -3,7 +3,6 @@ module Pages.Backup exposing (BackupModel, BackupMsg(..), init, update, view)
 import Backup.Decoder exposing (playlists)
 import Backup.Encoder exposing (playlistToJson, playlistsToJson)
 import Backup.Payloads as Backup exposing (spotifyToBackup)
-import Dialog
 import Dict exposing (Dict)
 import Element
     exposing
@@ -20,24 +19,20 @@ import Element
         , image
         , inFront
         , layout
-        , maximum
         , newTabLink
         , none
         , padding
         , paddingEach
         , px
         , row
-        , scrollbarY
         , shrink
         , table
         , text
         , width
         )
 import Element.Background as Background
-import Element.Border as Border
 import Element.Font as Font
-import Element.Input as Input exposing (checkbox, defaultCheckbox, labelHidden, labelLeft)
-import Element.Region as Region
+import Element.Input exposing (checkbox, defaultCheckbox, labelHidden, labelLeft)
 import File exposing (File)
 import File.Download as Download
 import File.Select as Select
@@ -45,22 +40,20 @@ import Html exposing (Html)
 import Http exposing (Error)
 import Json.Decode as Decode exposing (decodeString)
 import List exposing (reverse)
+import Pages.Backup.ImportDialog as ImportDialog exposing (ImportModel, ImportMsg(..))
 import Set exposing (Set)
 import Spotify.Api as Api exposing (errorToString)
 import Spotify.Payloads exposing (Paging, Playlist, Track, visibilityToString)
 import Spotify.Token exposing (Token)
 import Style
     exposing
-        ( black
-        , disabledButton
+        ( disabledButton
         , edges
         , heading
         , headingRow
-        , lightRed
         , spotifyBackground
         , spotifyButton
         , spotifyForeground
-        , white
         )
 import Task
 import Utilities exposing (hasValue, isAllowedChar, progress)
@@ -76,24 +69,12 @@ type BackupMsg
     | ExportAll
     | GotTracks Playlist (List Track) (Result Error (Paging Track))
     | GotTracksMultiPlaylist (List Backup.Playlist) Playlist (List Playlist) (List Track) (Result Error (Paging Track))
+    | ImportMessage ImportMsg
     | Import
     | ImportFileSelected File
     | ImportFileLoaded String
-    | CloseImport
-    | RenameImport String String
-    | SelectAllForImport Bool
-    | SelectForImport String Bool
-    | ImportSelected
     | PlaylistCreated (List Backup.Playlist) (List Backup.Playlist) (List Track) (Result Error String)
     | TracksAdded (List Backup.Playlist) String (List Backup.Playlist) (List Track) (Result Error ())
-
-
-type alias ImportModel =
-    { playlists : List Backup.Playlist
-    , renames : Dict String String
-    , selectedPlaylists : Set String
-    , existing : Set String
-    }
 
 
 type alias BackupModel =
@@ -148,64 +129,6 @@ retrievalFailure model what err =
     )
 
 
-noCollisions : ImportModel -> Bool
-noCollisions { renames, existing, selectedPlaylists, playlists } =
-    playlists
-        |> List.filter (\{ originalId } -> Set.member originalId selectedPlaylists)
-        |> List.filterMap (\{ name } -> Dict.get name renames)
-        |> List.map String.trim
-        |> List.any (\name -> Set.member name existing)
-        |> not
-
-
-importDialog : BackupModel -> Element BackupMsg
-importDialog model =
-    Dialog.view <|
-        Maybe.map
-            (\importModel ->
-                { closeMessage = Just CloseImport
-                , maskAttributes = []
-                , containerAttributes =
-                    [ padding 10
-                    , Background.color spotifyBackground
-                    , Border.color white
-                    , Border.width 1
-                    , centerX
-                    , centerY
-                    ]
-                , headerAttributes = []
-                , bodyAttributes = []
-                , footerAttributes = []
-                , header = Just (el [ Region.heading 1 ] <| text "Select playlists for import.")
-                , body =
-                    Just <|
-                        el
-                            [ height <| maximum 800 fill
-                            , scrollbarY
-                            ]
-                        <|
-                            table []
-                                { data = importModel.playlists
-                                , columns =
-                                    [ importNameColumn
-                                    , importRenameColumn importModel
-                                    , importImportColumn importModel
-                                    ]
-                                }
-                , footer =
-                    Just <|
-                        el [ centerX ]
-                            (if (not <| Set.isEmpty importModel.selectedPlaylists) && noCollisions importModel then
-                                spotifyButton "Import." <| Just ImportSelected
-
-                             else
-                                disabledButton "Import."
-                            )
-                }
-            )
-            model.importDialog
-
-
 decodeBackup : BackupModel -> String -> ( BackupModel, Cmd BackupMsg )
 decodeBackup model content =
     let
@@ -246,60 +169,46 @@ update msg model =
         Enter ->
             refresh model
 
-        CloseImport ->
+        ImportMessage CloseImport ->
             ( { model | status = Nothing, importDialog = Nothing }, Cmd.none )
 
-        SelectForImport id selected ->
+        ImportMessage ImportSelected ->
             case model.importDialog of
                 Nothing ->
                     ( model, Cmd.none )
 
                 Just importModel ->
-                    if selected then
-                        ( { model
-                            | importDialog = Just { importModel | selectedPlaylists = Set.insert id importModel.selectedPlaylists }
-                          }
-                        , Cmd.none
-                        )
+                    let
+                        selectedPlaylists =
+                            importModel.playlists
+                                |> List.filter (\{ originalId } -> Set.member originalId importModel.selectedPlaylists)
+                                |> List.map
+                                    (\pl ->
+                                        { pl
+                                            | name = Dict.get pl.name importModel.renames |> Maybe.withDefault pl.name |> String.trim
+                                            , tracks = List.filter (.url >> hasValue) pl.tracks
+                                        }
+                                    )
+                    in
+                    case selectedPlaylists of
+                        pl :: remaining ->
+                            ( { model
+                                | importDialog = Nothing
+                                , status = Just <| importProgress [] remaining
+                              }
+                            , Api.createPlaylist model.token model.userId pl.name <|
+                                PlaylistCreated [] remaining pl.tracks
+                            )
 
-                    else
-                        ( { model
-                            | importDialog = Just { importModel | selectedPlaylists = Set.remove id importModel.selectedPlaylists }
-                          }
-                        , Cmd.none
-                        )
+                        _ ->
+                            ( { model | importDialog = Nothing, status = Nothing }, Cmd.none )
 
-        SelectAllForImport selected ->
-            case model.importDialog of
-                Nothing ->
-                    ( model, Cmd.none )
-
-                Just importModel ->
-                    if selected then
-                        ( { model
-                            | importDialog = Just { importModel | selectedPlaylists = Set.fromList <| List.map .id model.playlists }
-                          }
-                        , Cmd.none
-                        )
-
-                    else
-                        ( { model
-                            | importDialog = Just { importModel | selectedPlaylists = Set.empty }
-                          }
-                        , Cmd.none
-                        )
-
-        RenameImport name rename ->
-            case model.importDialog of
-                Nothing ->
-                    ( model, Cmd.none )
-
-                Just importModel ->
-                    ( { model
-                        | importDialog = Just { importModel | renames = Dict.insert name rename importModel.renames }
-                      }
-                    , Cmd.none
-                    )
+        ImportMessage importMsg ->
+            let
+                ( updatedModel, importCmd ) =
+                    ImportDialog.update importMsg model.importDialog
+            in
+            ( { model | importDialog = updatedModel }, Cmd.map ImportMessage importCmd )
 
         Import ->
             ( model, Select.file [ "application/json" ] ImportFileSelected )
@@ -428,37 +337,6 @@ update msg model =
                     -- no playlists selected
                     ( model, Cmd.none )
 
-        ImportSelected ->
-            case model.importDialog of
-                Nothing ->
-                    ( model, Cmd.none )
-
-                Just importModel ->
-                    let
-                        selectedPlaylists =
-                            importModel.playlists
-                                |> List.filter (\{ originalId } -> Set.member originalId importModel.selectedPlaylists)
-                                |> List.map
-                                    (\pl ->
-                                        { pl
-                                            | name = Dict.get pl.name importModel.renames |> Maybe.withDefault pl.name |> String.trim
-                                            , tracks = List.filter (.url >> hasValue) pl.tracks
-                                        }
-                                    )
-                    in
-                    case selectedPlaylists of
-                        pl :: remaining ->
-                            ( { model
-                                | importDialog = Nothing
-                                , status = Just <| importProgress [] remaining
-                              }
-                            , Api.createPlaylist model.token model.userId pl.name <|
-                                PlaylistCreated [] remaining pl.tracks
-                            )
-
-                        _ ->
-                            ( { model | importDialog = Nothing, status = Nothing }, Cmd.none )
-
         TracksAdded done playlistId todo tracks result ->
             case result of
                 Err error ->
@@ -555,82 +433,6 @@ coverColumn =
                             { src = img.url, description = "" }
                     )
                 |> Maybe.withDefault (text "")
-    }
-
-
-importNameColumn : Column Backup.Playlist BackupMsg
-importNameColumn =
-    { header = heading "Name"
-    , width = shrink
-    , view =
-        \{ originalUrl, name } ->
-            el [ centerY, alignLeft, paddingEach { edges | right = 10 } ] <|
-                newTabLink [ Font.underline ]
-                    { url = originalUrl
-                    , label = text name
-                    }
-    }
-
-
-importRenameColumn : ImportModel -> Column Backup.Playlist BackupMsg
-importRenameColumn { existing, renames } =
-    { header = heading "Rename to"
-    , width = shrink
-    , view =
-        \{ name } ->
-            let
-                rename =
-                    Maybe.withDefault name <| Dict.get name renames
-
-                trimmed =
-                    String.trim rename
-            in
-            Input.text
-                [ Font.color black
-                , if Set.member trimmed existing then
-                    Background.color lightRed
-
-                  else
-                    Background.color white
-                ]
-                { onChange = RenameImport name
-                , text = rename
-                , placeholder = Nothing
-                , label = labelHidden name
-                }
-    }
-
-
-importImportColumn : ImportModel -> Column Backup.Playlist BackupMsg
-importImportColumn { playlists, selectedPlaylists } =
-    { header =
-        headingRow
-            [ text "Import"
-            , checkbox [ centerY ]
-                { onChange = SelectAllForImport
-                , icon = defaultCheckbox
-                , checked = List.all (\{ originalId } -> Set.member originalId selectedPlaylists) playlists
-                , label =
-                    labelLeft
-                        [ Font.size 12
-                        , paddingEach { edges | left = 10 }
-                        , centerY
-                        ]
-                    <|
-                        text "(all)"
-                }
-            ]
-    , width = shrink
-    , view =
-        \playlist ->
-            row [ centerY ]
-                [ checkbox [ centerY, paddingEach { edges | left = 10 } ]
-                    { onChange = SelectForImport playlist.originalId
-                    , icon = defaultCheckbox
-                    , checked = Set.member playlist.originalId selectedPlaylists
-                    , label = labelHidden playlist.originalId
-                    }
-                ]
     }
 
 
@@ -750,7 +552,7 @@ view model =
     layout
         [ Background.color spotifyBackground
         , Font.color spotifyForeground
-        , inFront <| importDialog model
+        , inFront <| Element.map ImportMessage <| ImportDialog.view model.importDialog
         ]
     <|
         column [ padding 20, width fill ]
