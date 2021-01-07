@@ -2,9 +2,7 @@ module Main exposing (main)
 
 import Browser exposing (Document, UrlRequest(..), application)
 import Browser.Navigation as Nav exposing (Key)
-import Element exposing (Element, centerX)
-import Element.Font as Font
-import Html exposing (Html, div)
+import Html exposing (Html)
 import Http exposing (Error)
 import Pages.Backup as Backup exposing (BackupModel, BackupMsg(..))
 import Route exposing (Route(..))
@@ -22,7 +20,6 @@ type Page
 
 type alias Model =
     { key : Key
-    , route : Route
     , page : Page
     }
 
@@ -37,13 +34,15 @@ type Msg
 init : () -> Url -> Key -> ( Model, Cmd Msg )
 init _ url key =
     let
+        route =
+            Route.fromUrl url
+
         model =
             { key = key
-            , route = Route.fromUrl url
             , page = StartPage
             }
     in
-    case model.route of
+    case route of
         Callback error fragment ->
             let
                 maybeToken =
@@ -62,14 +61,6 @@ init _ url key =
 
         _ ->
             ( model, Nav.load "/" )
-
-
-viewNotFoundPage : Url -> Html Msg
-viewNotFoundPage url =
-    centeredBody
-        [ Element.text <| "The path '" ++ url.path ++ "' does not exist."
-        , Element.link [ centerX, Font.underline ] { url = "/", label = Element.text "Go to start page." }
-        ]
 
 
 redirectToExternal : String -> Msg
@@ -100,19 +91,12 @@ view : Model -> Document Msg
 view model =
     { title = "Spotify Backup"
     , body =
-        [ case ( model.route, model.page ) of
-            ( Home, StartPage ) ->
+        [ case model.page of
+            StartPage ->
                 viewStartPage
 
-            ( NotFound url, _ ) ->
-                viewNotFoundPage url
-
-            ( Backup, BackupPage backupModel ) ->
+            BackupPage backupModel ->
                 Html.map BackupMessage <| Backup.view backupModel
-
-            _ ->
-                -- this would never happen
-                div [] []
         ]
     }
 
@@ -143,7 +127,7 @@ update msg model =
                         _ ->
                             ( model.page, Cmd.none )
             in
-            ( { model | route = Route.fromUrl url, page = page }, cmd )
+            ( { model | page = page }, cmd )
 
         ( Redirect urlRequest, _ ) ->
             case urlRequest of
