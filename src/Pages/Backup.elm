@@ -146,7 +146,7 @@ decodeBackup model content =
                                 { playlists = playlists
                                 , renames = Dict.fromList <| List.map (\{ name } -> ( name, name )) playlists
                                 , selectedPlaylists = Set.empty
-                                , existing = Set.fromList <| List.map .name playlists
+                                , existing = Set.fromList <| List.map .name model.playlists
                                 }
                     }
 
