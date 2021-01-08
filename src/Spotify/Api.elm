@@ -11,6 +11,7 @@ module Spotify.Api exposing
 
 import Backup.Encoder exposing (trackUris)
 import Http exposing (Error(..), Header, emptyBody, expectJson, expectWhatever, header, jsonBody, request, stringBody)
+import Json.Encode as Encode exposing (bool, object)
 import Spotify.Decoder exposing (paging, playlist, playlistId, track, userId)
 import Spotify.Payloads exposing (Paging, Playlist, Track)
 import Spotify.Token exposing (Token)
@@ -161,7 +162,7 @@ createPlaylist tok userId name msg =
         { method = "POST"
         , headers = [ authHeader tok ]
         , url = userPlaylistsUrl userId
-        , body = stringBody "application/json" <| "{\"name\": \"" ++ name ++ "\", \"public\": false}"
+        , body = jsonBody <| object [ ( "name", Encode.string name ), ( "public", bool False ) ]
         , expect = expectJson msg playlistId
         , timeout = Nothing
         , tracker = Nothing

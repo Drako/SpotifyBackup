@@ -80,6 +80,7 @@ nonColliding { renames, existing, playlists } =
 
 noCollisions : ImportModel -> Bool
 noCollisions { renames, existing, selectedPlaylists, playlists } =
+    -- TODO: make sure that renamed playlists also don't collide with each other
     playlists
         |> List.filter (\{ originalId } -> Set.member originalId selectedPlaylists)
         |> List.map (\{ name } -> Dict.get name renames |> Maybe.withDefault name)
