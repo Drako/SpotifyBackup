@@ -8,6 +8,15 @@ isAllowedChar c =
     isAlphaNum c || c == ' ' || c == '-' || c == '_'
 
 
+ifBlank : String -> String -> String
+ifBlank default possiblyBlank =
+    if String.isEmpty <| String.trim possiblyBlank then
+        default
+
+    else
+        possiblyBlank
+
+
 progress : String -> List a -> List b -> String
 progress action done todo =
     let

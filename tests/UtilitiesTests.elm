@@ -4,7 +4,21 @@ import Expect
 import List exposing (range)
 import Test exposing (Test)
 import TestHelpers exposing (parameterized)
-import Utilities exposing (hasValue, isAllowedChar, progress)
+import Utilities exposing (hasValue, ifBlank, isAllowedChar, progress)
+
+
+ifBlankTest : Test
+ifBlankTest =
+    let
+        params : List ( String, String )
+        params =
+            [ ( "", "<blank>" )
+            , ( " ", "<blank>" )
+            , ( "foo", "foo" )
+            ]
+    in
+    parameterized "ifBlank" params <|
+        \( input, expected ) -> Expect.equal expected <| ifBlank "<blank>" input
 
 
 progressTest : Test

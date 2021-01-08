@@ -41,6 +41,7 @@ import Style
         , spotifyButton
         , white
         )
+import Utilities exposing (ifBlank)
 
 
 type alias ImportModel =
@@ -98,7 +99,7 @@ nameColumn =
             el [ centerY, alignLeft, paddingEach { edges | right = 10 } ] <|
                 newTabLink [ Font.underline ]
                     { url = originalUrl
-                    , label = text name
+                    , label = text <| ifBlank "<blank>" name
                     }
     }
 
