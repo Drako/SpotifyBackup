@@ -69,7 +69,7 @@ nonColliding { renames, existing, playlists } =
                     renamed =
                         Dict.get name renames |> Maybe.map String.trim |> Maybe.withDefault name
                 in
-                if Set.member renamed existing then
+                if Set.member renamed existing || String.isEmpty renamed then
                     Nothing
 
                 else
@@ -82,9 +82,9 @@ noCollisions : ImportModel -> Bool
 noCollisions { renames, existing, selectedPlaylists, playlists } =
     playlists
         |> List.filter (\{ originalId } -> Set.member originalId selectedPlaylists)
-        |> List.filterMap (\{ name } -> Dict.get name renames)
+        |> List.map (\{ name } -> Dict.get name renames |> Maybe.withDefault name)
         |> List.map String.trim
-        |> List.any (\name -> Set.member name existing)
+        |> List.any (\name -> Set.member name existing || String.isEmpty name)
         |> not
 
 
@@ -117,7 +117,7 @@ renameColumn { existing, renames } =
             in
             Input.text
                 [ Font.color black
-                , if Set.member trimmed existing then
+                , if Set.member trimmed existing || String.isEmpty trimmed then
                     Background.color lightRed
 
                   else
