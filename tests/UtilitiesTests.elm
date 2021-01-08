@@ -39,27 +39,25 @@ hasValueTest =
 isAllowedCharTest : Test
 isAllowedCharTest =
     let
-        charsToCases : List Char -> List ( Char, Bool )
-        charsToCases =
-            List.map (\c -> ( c, True ))
+        keyCodesToCases : List Int -> List ( Char, Bool )
+        keyCodesToCases =
+            List.map Char.fromCode
+                >> List.map (\c -> ( c, True ))
 
         digits : List ( Char, Bool )
         digits =
             range 0x30 0x39
-                |> List.map Char.fromCode
-                |> charsToCases
+                |> keyCodesToCases
 
         lowerCase : List ( Char, Bool )
         lowerCase =
             range 97 122
-                |> List.map Char.fromCode
-                |> charsToCases
+                |> keyCodesToCases
 
         upperCase : List ( Char, Bool )
         upperCase =
             range 65 90
-                |> List.map Char.fromCode
-                |> charsToCases
+                |> keyCodesToCases
 
         params : List ( Char, Bool )
         params =
