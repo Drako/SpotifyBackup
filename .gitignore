@@ -13,3 +13,7 @@ index.html
 
 # elm-coverage
 .coverage/
+
+# npm stuff
+node_modules/
+package*.json
