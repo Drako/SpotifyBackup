@@ -67,7 +67,7 @@ nonColliding { renames, existing, playlists } =
             (\{ originalId, name } ->
                 let
                     renamed =
-                        Dict.get name renames |> Maybe.map String.trim |> Maybe.withDefault name
+                        Dict.get originalId renames |> Maybe.map String.trim |> Maybe.withDefault name
                 in
                 if Set.member renamed existing || String.isEmpty renamed then
                     Nothing
@@ -83,7 +83,7 @@ noCollisions { renames, existing, selectedPlaylists, playlists } =
     -- TODO: make sure that renamed playlists also don't collide with each other
     playlists
         |> List.filter (\{ originalId } -> Set.member originalId selectedPlaylists)
-        |> List.map (\{ name } -> Dict.get name renames |> Maybe.withDefault name)
+        |> List.map (\{ originalId, name } -> Dict.get originalId renames |> Maybe.withDefault name)
         |> List.map String.trim
         |> List.any (\name -> Set.member name existing || String.isEmpty name)
         |> not
@@ -108,10 +108,10 @@ renameColumn { existing, renames } =
     { header = heading "Rename to"
     , width = shrink
     , view =
-        \{ name } ->
+        \{ originalId, name } ->
             let
                 rename =
-                    Maybe.withDefault name <| Dict.get name renames
+                    Maybe.withDefault name <| Dict.get originalId renames
 
                 trimmed =
                     String.trim rename
@@ -124,7 +124,7 @@ renameColumn { existing, renames } =
                   else
                     Background.color white
                 ]
-                { onChange = RenameImport name
+                { onChange = RenameImport originalId
                 , text = rename
                 , placeholder = Nothing
                 , label = labelHidden name
@@ -198,8 +198,8 @@ update msg model =
                 SelectNonCollidingForImport ->
                     ( Just { importModel | selectedPlaylists = nonColliding importModel }, Cmd.none )
 
-                RenameImport name rename ->
-                    ( Just { importModel | renames = Dict.insert name rename importModel.renames }
+                RenameImport originalId rename ->
+                    ( Just { importModel | renames = Dict.insert originalId rename importModel.renames }
                     , Cmd.none
                     )
 

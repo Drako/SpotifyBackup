@@ -144,7 +144,7 @@ decodeBackup model content =
                         , importDialog =
                             Just
                                 { playlists = playlists
-                                , renames = Dict.fromList <| List.map (\{ name } -> ( name, name )) playlists
+                                , renames = Dict.fromList <| List.map (\{ originalId, name } -> ( originalId, name )) playlists
                                 , selectedPlaylists = Set.empty
                                 , existing = Set.fromList <| List.map .name model.playlists
                                 }
@@ -185,7 +185,10 @@ update msg model =
                                 |> List.map
                                     (\pl ->
                                         { pl
-                                            | name = Dict.get pl.name importModel.renames |> Maybe.withDefault pl.name |> String.trim
+                                            | name =
+                                                Dict.get pl.originalId importModel.renames
+                                                    |> Maybe.withDefault pl.name
+                                                    |> String.trim
                                             , tracks = List.filter (.url >> hasValue) pl.tracks
                                         }
                                     )
