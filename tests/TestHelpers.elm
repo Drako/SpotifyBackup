@@ -1,4 +1,4 @@
-module TestHelpers exposing (..)
+module TestHelpers exposing (parameterized, parameterizedWithTitles)
 
 import Expect exposing (Expectation)
 import Test exposing (Test, describe, test)
