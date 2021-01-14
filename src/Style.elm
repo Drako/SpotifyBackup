@@ -1,27 +1,12 @@
 module Style exposing (..)
 
-import Element
-    exposing
-        ( Color
-        , Element
-        , centerX
-        , centerY
-        , column
-        , el
-        , layout
-        , mouseOver
-        , padding
-        , paddingEach
-        , rgb255
-        , row
-        , spacing
-        , text
-        )
+import Element exposing (Attribute, Color, Element, centerX, centerY, column, el, layout, mouseOver, padding, paddingEach, rgb255, row, spacing, text)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input exposing (button)
 import Html exposing (Html)
+import Utilities exposing (takeIf)
 
 
 centeredBody : List (Element msg) -> Html msg
@@ -97,39 +82,35 @@ headingRow elements =
         elements
 
 
-spotifyButton : String -> Maybe msg -> Element msg
-spotifyButton label action =
-    el [ padding 10 ] <|
-        button
-            [ Border.solid
-            , Border.rounded 25
-            , Border.color spotifyGreen
-            , Border.width 1
-            , padding 15
-            , Background.color spotifyGreen
-            , Font.color white
-            , mouseOver
+spotifyButton : String -> Bool -> msg -> Element msg
+spotifyButton label enabled action =
+    let
+        backgroundColor : Color
+        backgroundColor =
+            spotifyGreen |> takeIf enabled |> Maybe.withDefault spotifyBackground
+
+        hoverEffect : List (Attribute msg)
+        hoverEffect =
+            [ mouseOver
                 [ Border.color spotifyLightGreen
                 , Background.color spotifyLightGreen
                 ]
             ]
-            { onPress = action
-            , label = text label
-            }
-
-
-disabledButton : String -> Element msg
-disabledButton label =
+                |> takeIf enabled
+                |> Maybe.withDefault []
+    in
     el [ padding 10 ] <|
         button
-            [ Border.solid
-            , Border.rounded 25
-            , Border.color spotifyGreen
-            , Border.width 1
-            , padding 15
-            , Background.color spotifyBackground
-            , Font.color white
-            ]
-            { onPress = Nothing
+            ([ Border.solid
+             , Border.rounded 25
+             , Border.color spotifyGreen
+             , Border.width 1
+             , padding 15
+             , Background.color backgroundColor
+             , Font.color white
+             ]
+                ++ hoverEffect
+            )
+            { onPress = action |> takeIf enabled
             , label = text label
             }

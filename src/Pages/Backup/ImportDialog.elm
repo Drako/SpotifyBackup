@@ -32,7 +32,6 @@ import Set exposing (Set)
 import Style
     exposing
         ( black
-        , disabledButton
         , edges
         , heading
         , headingRow
@@ -247,12 +246,13 @@ view model =
                 , footer =
                     Just <|
                         row [ centerX ]
-                            [ spotifyButton "Select non-colliding." <| Just SelectNonCollidingForImport
-                            , if (not <| Set.isEmpty importModel.selectedPlaylists) && noCollisions importModel then
-                                spotifyButton "Import." <| Just ImportSelected
-
-                              else
-                                disabledButton "Import."
+                            [ spotifyButton "Select non-colliding." True SelectNonCollidingForImport
+                            , let
+                                importEnabled : Bool
+                                importEnabled =
+                                    not <| Set.isEmpty importModel.selectedPlaylists && noCollisions importModel
+                              in
+                              spotifyButton "Import." importEnabled ImportSelected
                             ]
                 }
             )

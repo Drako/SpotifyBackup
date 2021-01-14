@@ -47,8 +47,7 @@ import Spotify.Payloads exposing (Paging, Playlist, Track, visibilityToString)
 import Spotify.Token exposing (Token)
 import Style
     exposing
-        ( disabledButton
-        , edges
+        ( edges
         , heading
         , headingRow
         , spotifyBackground
@@ -520,12 +519,7 @@ exportColumn { playlists, selectedPlaylists, status } =
                     , checked = Set.member playlist.id selectedPlaylists
                     , label = labelHidden playlist.id
                     }
-                , case status of
-                    Nothing ->
-                        spotifyButton "Export this." <| Just <| Export playlist
-
-                    Just _ ->
-                        disabledButton "Export this."
+                , spotifyButton "Export this." (hasValue status |> not) <| Export playlist
                 ]
     }
 
@@ -541,12 +535,12 @@ actionButtons { status } =
             ]
     in
     row [ centerX ]
-        (case status of
-            Nothing ->
-                List.map (\( txt, msg ) -> spotifyButton txt <| Just msg) buttons
-
-            Just _ ->
-                List.map (\( txt, _ ) -> disabledButton txt) buttons
+        (let
+            enabled : Bool
+            enabled =
+                hasValue status |> not
+         in
+         List.map (\( txt, msg ) -> spotifyButton txt enabled msg) buttons
         )
 
 

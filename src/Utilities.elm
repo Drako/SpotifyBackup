@@ -3,6 +3,15 @@ module Utilities exposing (..)
 import Char exposing (isAlphaNum)
 
 
+takeIf : Bool -> a -> Maybe a
+takeIf enabled value =
+    if enabled then
+        Just value
+
+    else
+        Nothing
+
+
 isAllowedChar : Char -> Bool
 isAllowedChar c =
     isAlphaNum c || c == ' ' || c == '-' || c == '_'
