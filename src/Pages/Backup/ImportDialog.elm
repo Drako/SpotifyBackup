@@ -250,7 +250,7 @@ view model =
                             , let
                                 importEnabled : Bool
                                 importEnabled =
-                                    not <| Set.isEmpty importModel.selectedPlaylists && noCollisions importModel
+                                    (not <| Set.isEmpty importModel.selectedPlaylists) && noCollisions importModel
                               in
                               spotifyButton "Import." importEnabled ImportSelected
                             ]
