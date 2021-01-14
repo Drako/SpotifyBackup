@@ -4,7 +4,20 @@ import Expect
 import List exposing (range)
 import Test exposing (Test)
 import TestHelpers exposing (parameterized)
-import Utilities exposing (hasValue, ifBlank, isAllowedChar, progress)
+import Utilities exposing (hasValue, ifBlank, isAllowedChar, progress, takeIf)
+
+
+takeIfTest : Test
+takeIfTest =
+    let
+        params : List ( Bool, Maybe String )
+        params =
+            [ ( False, Nothing )
+            , ( True, Just "foo" )
+            ]
+    in
+    parameterized "takeIf" params <|
+        \( enabled, expected ) -> Expect.equal expected <| takeIf enabled "foo"
 
 
 ifBlankTest : Test
