@@ -48,8 +48,8 @@ import Spotify.Token exposing (Token)
 import Style
     exposing
         ( edges
-        , heading
         , headingRow
+        , headingText
         , spotifyBackground
         , spotifyButton
         , spotifyForeground
@@ -421,7 +421,7 @@ update msg model =
 
 coverColumn : Column Playlist BackupMsg
 coverColumn =
-    { header = heading "Cover image"
+    { header = headingText "Cover image"
     , width = shrink
     , view =
         \{ images } ->
@@ -440,7 +440,7 @@ coverColumn =
 
 nameColumn : Column Playlist BackupMsg
 nameColumn =
-    { header = heading "Name"
+    { header = headingText "Name"
     , width = fill
     , view =
         \{ url, name } ->
@@ -454,7 +454,7 @@ nameColumn =
 
 ownerColumn : Column Playlist BackupMsg
 ownerColumn =
-    { header = heading "Owner"
+    { header = headingText "Owner"
     , width = shrink
     , view =
         \{ owner } ->
@@ -468,7 +468,7 @@ ownerColumn =
 
 visibilityColumn : Column Playlist BackupMsg
 visibilityColumn =
-    { header = heading "Visibility"
+    { header = headingText "Visibility"
     , width = shrink
     , view =
         \{ isPublic } ->
@@ -480,7 +480,7 @@ visibilityColumn =
 
 tracksColumn : Column Playlist BackupMsg
 tracksColumn =
-    { header = heading "#Tracks"
+    { header = headingText "#Tracks"
     , width = shrink
     , view =
         \{ tracks } ->

@@ -1,6 +1,34 @@
-module Style exposing (..)
+module Style exposing
+    ( black
+    , centeredBody
+    , edges
+    , headingRow
+    , headingText
+    , lightRed
+    , spotifyBackground
+    , spotifyButton
+    , spotifyForeground
+    , white
+    )
 
-import Element exposing (Attribute, Color, Element, centerX, centerY, column, el, layout, mouseOver, padding, paddingEach, rgb255, row, spacing, text)
+import Element
+    exposing
+        ( Attribute
+        , Color
+        , Element
+        , centerX
+        , centerY
+        , column
+        , el
+        , layout
+        , mouseOver
+        , padding
+        , paddingEach
+        , rgb255
+        , row
+        , spacing
+        , text
+        )
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
@@ -55,9 +83,9 @@ edges =
     { top = 0, bottom = 0, left = 0, right = 0 }
 
 
-heading : String -> Element msg
-heading txt =
-    el
+headingImpl : (List (Attribute msg) -> body -> Element msg) -> body -> Element msg
+headingImpl elem body =
+    elem
         [ Font.color white
         , Font.size 24
         , Border.widthEach { edges | bottom = 1 }
@@ -65,21 +93,18 @@ heading txt =
         , Border.color spotifyForeground
         , paddingEach { edges | bottom = 10, right = 10 }
         ]
-    <|
+        body
+
+
+headingText : String -> Element msg
+headingText txt =
+    headingImpl el <|
         text txt
 
 
 headingRow : List (Element msg) -> Element msg
 headingRow elements =
-    row
-        [ Font.color white
-        , Font.size 24
-        , Border.widthEach { edges | bottom = 1 }
-        , Border.solid
-        , Border.color spotifyForeground
-        , paddingEach { edges | bottom = 10, right = 10 }
-        ]
-        elements
+    headingImpl row elements
 
 
 spotifyButton : String -> Bool -> msg -> Element msg

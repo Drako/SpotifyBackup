@@ -33,8 +33,8 @@ import Style
     exposing
         ( black
         , edges
-        , heading
         , headingRow
+        , headingText
         , lightRed
         , spotifyBackground
         , spotifyButton
@@ -91,7 +91,7 @@ noCollisions { renames, existing, selectedPlaylists, playlists } =
 
 nameColumn : Column Backup.Playlist ImportMsg
 nameColumn =
-    { header = heading "Name"
+    { header = headingText "Name"
     , width = shrink
     , view =
         \{ originalUrl, name } ->
@@ -105,7 +105,7 @@ nameColumn =
 
 renameColumn : ImportModel -> Column Backup.Playlist ImportMsg
 renameColumn { existing, renames } =
-    { header = heading "Rename to"
+    { header = headingText "Rename to"
     , width = shrink
     , view =
         \{ originalId, name } ->
