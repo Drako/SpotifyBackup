@@ -64,6 +64,8 @@ selectImportTest =
         params : List ( String, Bool, Set String )
         params =
             [ ( playlistObject.originalId, True, Set.fromList [ playlistObject.originalId, playlistObject2.originalId ] )
+            , ( playlistObject.originalId, False, Set.fromList [ playlistObject2.originalId ] )
+            , ( playlistObject2.originalId, True, Set.fromList [ playlistObject2.originalId ] )
             , ( playlistObject2.originalId, False, Set.empty )
             ]
     in
