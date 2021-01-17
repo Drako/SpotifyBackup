@@ -20,7 +20,7 @@ urlDecode string =
 
 
 partsToKeyValue : List (List String) -> List ( String, String )
-partsToKeyValue kvs =
+partsToKeyValue =
     filterMap
         (\kv ->
             case kv of
@@ -33,7 +33,6 @@ partsToKeyValue kvs =
                 _ ->
                     Nothing
         )
-        kvs
 
 
 fromFragment : String -> Maybe Token

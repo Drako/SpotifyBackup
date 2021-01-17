@@ -1,4 +1,4 @@
-module Pages.Home exposing (..)
+module Pages.Home exposing (HomeMsg(..), view)
 
 import Browser exposing (UrlRequest(..))
 import Element exposing (centerX, newTabLink, text)
