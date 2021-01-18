@@ -27,9 +27,6 @@ partsToKeyValue =
                 [ k, v ] ->
                     Just ( urlDecode k, urlDecode v )
 
-                [ k ] ->
-                    Just ( urlDecode k, "" )
-
                 _ ->
                     Nothing
         )

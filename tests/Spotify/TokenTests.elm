@@ -11,10 +11,15 @@ fromFragmentInvalidTokenTest =
     let
         params : List ( String, ( String, Maybe Token ) )
         params =
-            [ ( "invalid", ( "foo", Nothing ) )
+            [ ( "invalid", ( "access_token&token_type=token", Nothing ) )
             , ( "valid"
               , ( "access_token=foo&token_type=token&expires_in=10"
                 , Just { accessToken = "foo", tokenType = "token", expiresIn = 10 }
+                )
+              )
+            , ( "valid with empty value"
+              , ( "access_token=&token_type=empty&expires_in=23"
+                , Just { accessToken = "", tokenType = "empty", expiresIn = 23 }
                 )
               )
             ]
