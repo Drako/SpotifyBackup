@@ -1,4 +1,4 @@
-module Main exposing (main)
+module Main exposing (Model, Msg(..), Page(..), init, main, subscriptions, update, view)
 
 import Browser exposing (Document, UrlRequest(..), application)
 import Browser.Navigation as Nav exposing (Key)
@@ -18,7 +18,7 @@ type Page
 
 
 type alias Model =
-    { key : Key
+    { key : Maybe Key
     , page : Page
     }
 
@@ -31,7 +31,7 @@ type Msg
     | ReceivedUser Token (Result Error String)
 
 
-init : () -> Url -> Key -> ( Model, Cmd Msg )
+init : () -> Url -> Maybe Key -> ( Model, Cmd Msg )
 init _ url key =
     let
         route =
@@ -63,25 +63,30 @@ init _ url key =
             ( model, Nav.load "/" )
 
 
-view : Model -> Document Msg
-view model =
+view : (() -> Html HomeMsg) -> (BackupModel -> Html BackupMsg) -> Model -> Document Msg
+view homeView backupView model =
     { title = "Spotify Backup"
     , body =
         [ case model.page of
             HomePage ->
-                Html.map HomeMessage Home.view
+                Html.map HomeMessage (homeView ())
 
             BackupPage backupModel ->
-                Html.map BackupMessage <| Backup.view backupModel
+                Html.map BackupMessage <| backupView backupModel
         ]
     }
+
+
+withKey : (Key -> Cmd Msg) -> Maybe Key -> Cmd Msg
+withKey cmd =
+    Maybe.map cmd >> Maybe.withDefault Cmd.none
 
 
 redirect : Model -> UrlRequest -> ( Model, Cmd Msg )
 redirect model urlRequest =
     case urlRequest of
         Internal url ->
-            ( model, Nav.pushUrl model.key <| Url.toString url )
+            ( model, model.key |> withKey (\key -> Nav.pushUrl key <| Url.toString url) )
 
         External url ->
             ( model, Nav.load url )
@@ -93,7 +98,9 @@ update msg model =
         ( ReceivedUser token result, _ ) ->
             case result of
                 Ok userId ->
-                    ( { model | page = BackupPage <| Backup.init token userId }, Nav.replaceUrl model.key "/backup" )
+                    ( { model | page = BackupPage <| Backup.init token userId }
+                    , model.key |> withKey (\key -> Nav.replaceUrl key "/backup")
+                    )
 
                 Err _ ->
                     ( model, Nav.load "/" )
@@ -140,8 +147,8 @@ subscriptions _ =
 main : Program () Model Msg
 main =
     application
-        { init = init
-        , view = view
+        { init = \flags url key -> init flags url (Just key)
+        , view = view (\_ -> Home.view) Backup.view
         , update = update
         , subscriptions = subscriptions
         , onUrlRequest = Redirect
