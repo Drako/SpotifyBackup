@@ -31,8 +31,8 @@ type Msg
     | ReceivedUser Token (Result Error String)
 
 
-init : () -> Url -> Maybe Key -> ( Model, Cmd Msg )
-init _ url key =
+init : Url -> Maybe Key -> ( Model, Cmd Msg )
+init url key =
     let
         route =
             Route.fromUrl url
@@ -147,7 +147,7 @@ subscriptions _ =
 main : Program () Model Msg
 main =
     application
-        { init = \flags url key -> init flags url (Just key)
+        { init = \_ url key -> init url (Just key)
         , view = view (\_ -> Home.view) Backup.view
         , update = update
         , subscriptions = subscriptions
