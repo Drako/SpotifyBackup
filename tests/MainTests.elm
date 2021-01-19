@@ -1,10 +1,12 @@
 module MainTests exposing (..)
 
-import Browser exposing (Document)
+import Browser exposing (Document, UrlRequest(..))
 import Expect
 import Html exposing (Html, div)
-import Main exposing (Model, Msg, Page(..), init, main, subscriptions, view)
-import Pages.Backup exposing (BackupModel)
+import Http exposing (Error(..))
+import Main exposing (Model, Msg(..), Page(..), init, main, subscriptions, update, view)
+import Pages.Backup exposing (BackupModel, BackupMsg(..))
+import Pages.Home exposing (HomeMsg(..))
 import RouteTests exposing (basicUrl)
 import Set
 import Test exposing (Test, test)
@@ -43,6 +45,11 @@ callView toResult model =
             (\_ -> div [] [ Html.text "Home" ])
             (\_ -> div [] [ Html.text "Backup" ])
             model
+
+
+urlPath : String -> Url
+urlPath path =
+    { basicUrl | path = path }
 
 
 noSubscriptionsTest : Test
@@ -86,38 +93,67 @@ initTest =
         homePage =
             { key = Nothing, page = HomePage }
 
-        urlPath : String -> Url
-        urlPath path =
-            { basicUrl | path = path }
-
-        params : List ( String, ( Url, Model ) )
+        params : List ( String, Url )
         params =
-            [ ( "path: / (HomePage)", ( urlPath "/", homePage ) )
-            , ( "path: /bs (NotFound -> HomePage)", ( urlPath "/bs", homePage ) )
+            [ ( "path: /", urlPath "/" )
+            , ( "path: /bs", urlPath "/bs" )
 
             -- callback with valid token triggers loading of user id before redirecting to backup page
+            -- sadly this is not reflected in the Model, so we still just get the homePage model here
             , ( "path: /callback#access_token=foo&token_type=token&expires_in=10 (HomePage)"
-              , ( { basicUrl
+              , { basicUrl
                     | path = "/callback"
                     , fragment = Just "access_token=foo&token_type=token&expires_in=10"
-                  }
-                , homePage
-                )
+                }
               )
 
             -- callback with invalid token redirects to home page
-            , ( "path: /callback#token (HomePage)"
-              , ( { basicUrl | path = "/callback", fragment = Just "token" }, homePage )
+            , ( "path: /callback#token"
+              , { basicUrl | path = "/callback", fragment = Just "token" }
               )
 
             -- callback with error redirects to home page
-            , ( "path: /callback?error=foo (HomePage)"
-              , ( { basicUrl | path = "/callback", query = Just "error=foo" }, homePage )
+            , ( "path: /callback?error=foo"
+              , { basicUrl | path = "/callback", query = Just "error=foo" }
               )
 
             -- backup cannot be accessed directly, when calling the URL one is redirected to the home page
-            , ( "path: /backup (HomePage)", ( urlPath "/backup", homePage ) )
+            , ( "path: /backup", urlPath "/backup" )
             ]
     in
     parameterizedWithTitles "[init] model should be initialized according to URL" params <|
-        \( url, expected ) -> Expect.equal expected <| first <| init url Nothing
+        \url -> Expect.equal homePage <| first <| init url Nothing
+
+
+updateTest : Test
+updateTest =
+    let
+        params : List ( String, ( Model, Msg, Model ) )
+        params =
+            [ ( "received user (ok)"
+              , ( dummyModel
+                , ReceivedUser dummyBackupModel.token (Ok "<user-id>")
+                , { dummyModel | page = BackupPage dummyBackupModel }
+                )
+              )
+            , ( "received user (err)", ( dummyModel, ReceivedUser dummyBackupModel.token (Err Timeout), dummyModel ) )
+            , ( "navigated", ( dummyModel, Navigated (urlPath "/"), dummyModel ) )
+            , ( "navigated to callback"
+              , ( { dummyModel | page = BackupPage dummyBackupModel }
+                , Navigated (urlPath "/backup")
+                , { dummyModel | page = BackupPage { dummyBackupModel | playlists = [], status = Just "Retrieving playlists." } }
+                )
+              )
+            , ( "redirect", ( dummyModel, Redirect (Internal basicUrl), dummyModel ) )
+            , ( "home -> authenticate", ( dummyModel, HomeMessage (Authenticate (External "")), dummyModel ) )
+            , ( "backup"
+              , ( { dummyModel | page = BackupPage dummyBackupModel }
+                , BackupMessage Enter
+                , { dummyModel | page = BackupPage { dummyBackupModel | playlists = [], status = Just "Retrieving playlists." } }
+                )
+              )
+            , ( "backup message on home page", ( dummyModel, BackupMessage Enter, dummyModel ) )
+            ]
+    in
+    parameterizedWithTitles "[update] model should be updated according to message" params <|
+        \( inputModel, message, expected ) -> Expect.equal expected <| first <| update message inputModel
