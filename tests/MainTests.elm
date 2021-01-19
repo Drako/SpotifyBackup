@@ -33,16 +33,6 @@ dummyBackupModel =
     }
 
 
-dummyViewPage : Page -> Html Msg
-dummyViewPage page =
-    case page of
-        HomePage ->
-            div [] [ Html.text "Home" ]
-
-        BackupPage _ ->
-            div [] [ Html.text "Backup" ]
-
-
 callView : (Document Msg -> a) -> Model -> a
 callView toResult model =
     toResult <|
