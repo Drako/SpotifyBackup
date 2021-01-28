@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Tests in SpotifyBackup" type="ELM_TEST_RUN_CONFIGURATION" factoryName="Elm Test configuration factory">
-    <ElmTestRunConfiguration elm-folder="$PROJECT_DIR$" />
+    <ElmTestRunConfiguration elm-folder="D:\Projekte\Privat\SpotifyBackup" />
     <method v="2" />
   </configuration>
 </component>
