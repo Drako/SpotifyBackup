@@ -2,7 +2,7 @@ module MainTests exposing (..)
 
 import Browser exposing (Document, UrlRequest(..))
 import Expect
-import Html exposing (Html, div)
+import Html exposing (div)
 import Http exposing (Error(..))
 import Main exposing (Model, Msg(..), Page(..), init, main, subscriptions, update, view)
 import Pages.Backup exposing (BackupModel, BackupMsg(..))

@@ -4,7 +4,7 @@ import Dict exposing (get)
 import List exposing (filterMap, map)
 import Maybe exposing (withDefault)
 import String exposing (split)
-import Url exposing (Url)
+import Url
 
 
 type alias Token =

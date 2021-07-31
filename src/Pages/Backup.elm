@@ -3,7 +3,7 @@ module Pages.Backup exposing (BackupModel, BackupMsg(..), init, update, view)
 import Backup.Decoder exposing (playlists)
 import Backup.Encoder exposing (playlistToJson, playlistsToJson)
 import Backup.Payloads as Backup exposing (spotifyToBackup)
-import Dict exposing (Dict)
+import Dict
 import Element
     exposing
         ( Column

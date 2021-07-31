@@ -10,7 +10,7 @@ module Spotify.Api exposing
     )
 
 import Backup.Encoder exposing (trackUris)
-import Http exposing (Error(..), Header, emptyBody, expectJson, expectWhatever, header, jsonBody, request, stringBody)
+import Http exposing (Error(..), Header, emptyBody, expectJson, expectWhatever, header, jsonBody, request)
 import Json.Encode as Encode exposing (bool, object)
 import Spotify.Decoder exposing (paging, playlist, playlistId, track, userId)
 import Spotify.Payloads exposing (Paging, Playlist, Track)
