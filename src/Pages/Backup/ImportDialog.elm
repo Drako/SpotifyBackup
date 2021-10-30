@@ -80,13 +80,33 @@ nonColliding { renames, existing, playlists } =
 
 noCollisions : ImportModel -> Bool
 noCollisions { renames, existing, selectedPlaylists, playlists } =
-    -- TODO: make sure that renamed playlists also don't collide with each other
-    playlists
-        |> List.filter (\{ originalId } -> Set.member originalId selectedPlaylists)
-        |> List.map (\{ originalId, name } -> Dict.get originalId renames |> Maybe.withDefault name)
-        |> List.map String.trim
-        |> List.any (\name -> Set.member name existing || String.isEmpty name)
-        |> not
+    let
+        selectedNames =
+            playlists
+                |> List.filter (\{ originalId } -> Set.member originalId selectedPlaylists)
+                |> List.map (\{ originalId, name } -> Dict.get originalId renames |> Maybe.withDefault name)
+                |> List.map String.trim
+
+        noCollisionsAmongRenames =
+            selectedNames
+                |> List.sort
+                |> List.foldl
+                    (\name ( prev, collision ) ->
+                        if collision then
+                            ( name, collision )
+
+                        else
+                            ( name, prev == name )
+                    )
+                    ( "", False )
+                |> (\( _, collision ) -> not collision)
+
+        noCollisionsWithExisting =
+            selectedNames
+                |> List.any (\name -> Set.member name existing || String.isEmpty name)
+                |> not
+    in
+    noCollisionsAmongRenames && noCollisionsWithExisting
 
 
 nameColumn : Column Backup.Playlist ImportMsg
@@ -118,6 +138,8 @@ renameColumn { existing, renames } =
             in
             Input.text
                 [ Font.color black
+
+                -- TODO: color red when renamed playlists collide with each other
                 , if Set.member trimmed existing || String.isEmpty trimmed then
                     Background.color lightRed
 
