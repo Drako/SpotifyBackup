@@ -29,6 +29,7 @@ dummyBackupModel =
         , tokenType = "token"
         , expiresIn = 10
         }
+    , filter = ""
     , userId = "<user-id>"
     , error = Nothing
     , status = Nothing

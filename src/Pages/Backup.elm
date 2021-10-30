@@ -41,6 +41,7 @@ import Http exposing (Error)
 import Json.Decode as Decode exposing (decodeString)
 import List exposing (reverse)
 import Pages.Backup.ImportDialog as ImportDialog exposing (ImportModel, ImportMsg(..))
+import Regex exposing (Regex)
 import Set exposing (Set)
 import Spotify.Api as Api exposing (errorToString)
 import Spotify.Payloads exposing (Paging, Playlist, Track, visibilityToString)
@@ -74,6 +75,7 @@ type BackupMsg
     | ImportFileLoaded String
     | PlaylistCreated (List Backup.Playlist) (List Backup.Playlist) (List Track) (Result Error String)
     | TracksAdded (List Backup.Playlist) String (List Backup.Playlist) (List Track) (Result Error ())
+    | FilterChanged String
 
 
 type alias BackupModel =
@@ -83,14 +85,28 @@ type alias BackupModel =
     , status : Maybe String
     , playlists : List Playlist
     , selectedPlaylists : Set String
+    , filter : String
     , importDialog : Maybe ImportModel
     }
+
+
+filteredPlaylists : String -> List Playlist -> List Playlist
+filteredPlaylists filter unfiltered =
+    let
+        filterRegex : Maybe Regex
+        filterRegex =
+            Regex.fromStringWith { multiline = False, caseInsensitive = True } filter
+    in
+    filterRegex
+        |> Maybe.map (\r -> List.filter (\pl -> Regex.contains r pl.name) unfiltered)
+        |> Maybe.withDefault unfiltered
 
 
 init : Token -> String -> BackupModel
 init tok userId =
     { playlists = []
     , selectedPlaylists = Set.empty
+    , filter = ""
     , error = Nothing
     , status = Nothing
     , token = tok
@@ -165,6 +181,9 @@ refresh model =
 update : BackupMsg -> BackupModel -> ( BackupModel, Cmd BackupMsg )
 update msg model =
     case msg of
+        FilterChanged filter ->
+            ( { model | filter = filter }, Cmd.none )
+
         Enter ->
             refresh model
 
@@ -525,7 +544,7 @@ exportColumn { playlists, selectedPlaylists, status } =
 
 
 actionButtons : BackupModel -> Element BackupMsg
-actionButtons { status } =
+actionButtons { status, filter } =
     let
         buttons =
             [ ( "Refresh playlists.", Enter )
@@ -535,12 +554,15 @@ actionButtons { status } =
             ]
     in
     row [ centerX ]
-        (let
-            enabled : Bool
-            enabled =
-                hasValue status |> not
-         in
-         List.map (\( txt, msg ) -> spotifyButton txt enabled msg) buttons
+        (Element.Input.text []
+            { onChange = FilterChanged, placeholder = Nothing, label = labelLeft [ centerY ] (text "Filter:"), text = filter }
+            :: (let
+                    enabled : Bool
+                    enabled =
+                        hasValue status |> not
+                in
+                List.map (\( txt, msg ) -> spotifyButton txt enabled msg) buttons
+               )
         )
 
 
@@ -557,7 +579,7 @@ view model =
             , Maybe.withDefault none <| Maybe.map (\stat -> text <| "Status: " ++ stat) model.status
             , actionButtons model
             , table []
-                { data = model.playlists
+                { data = filteredPlaylists model.filter model.playlists
                 , columns =
                     [ coverColumn
                     , nameColumn
