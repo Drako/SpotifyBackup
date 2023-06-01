@@ -23,5 +23,5 @@ jobs:
         run: |
           echo "${{ secrets.KEY }}" > id_rsa
           chmod 0600 id_rsa
-          scp -i ./id_rsa index.html ${{ secrets.USERNAME }}@${{ secrets.HOST }}:/var/www/spotify-backup/public
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ./id_rsa index.html ${{ secrets.USERNAME }}@${{ secrets.HOST }}:/var/www/spotify-backup/public
           rm -f id_rsa
