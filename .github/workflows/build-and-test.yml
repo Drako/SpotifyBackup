@@ -17,3 +17,13 @@ jobs:
 
       - name: Run Tests
         run: npx elm-test
+
+      - name: Deploy
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          port: ${{ secrets.PORT }}
+          source: "index.html"
+          target: /var/www/spotify-backup/public/index.html
