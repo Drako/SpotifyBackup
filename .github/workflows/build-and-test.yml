@@ -5,6 +5,7 @@ on: [ push ]
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    environment: Deployment
 
     steps:
       - uses: actions/checkout@v2
@@ -21,9 +22,9 @@ jobs:
       - name: Deploy
         uses: appleboy/scp-action@v0.1.4
         with:
-          host: ${{ Deployment.HOST }}
-          username: ${{ Deployment.USERNAME }}
-          key: ${{ Deployment.KEY }}
-          port: ${{ Deployment.PORT }}
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          port: ${{ secrets.PORT }}
           source: "index.html"
           target: /var/www/spotify-backup/public/index.html
